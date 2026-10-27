@@ -14,6 +14,7 @@ import { remainingMs } from "@/lib/timer/restTimer";
 import { formatClock } from "@/lib/util/dates";
 import { liveOf, useBuddies } from "@/features/buddies/BuddiesProvider";
 import { ReminderWatcher } from "./ReminderWatcher";
+import { useServiceWorker } from "@/lib/pwa/install";
 
 const NAV: { href: string; label: string; short: string; icon: IconName; dock: boolean }[] = [
   { href: "/", label: "Today", short: "Today", icon: "home", dock: true },
@@ -31,6 +32,7 @@ function isActive(path: string, href: string) {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname() ?? "/";
   const { mode, configured, ready } = useApp();
+  useServiceWorker();
   const bare = path.startsWith("/auth");
   if (bare)
     return (

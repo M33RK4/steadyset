@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { cx } from "./primitives";
 
@@ -147,24 +148,33 @@ export function HeroArt({ className }: { className?: string }) {
   );
 }
 
-/** The app's mark: a lily or a mountain peak. */
-export function BrandMark({ size = 34 }: { size?: number }) {
-  const { prefs } = useApp();
+/** The app's logo — a dumbbell inside a progress ring — the same in both themes (matches the app icon). */
+export function BrandMark({ size = 36 }: { size?: number }) {
+  const id = useId().replace(/:/g, "");
   return (
-    <span className="grid place-items-center shrink-0 bg-accent text-accent-ink rounded-btn btn" style={{ width: size, height: size }} aria-hidden="true">
-      {prefs.theme === "lily" ? (
-        <svg viewBox="-28 -28 56 56" width={size * 0.78} height={size * 0.78}>
-          {[0, 60, 120, 180, 240, 300].map((a) => (
-            <path key={a} d="M0 0 C 5 -4, 7 -13, 0 -24 C -7 -13, -5 -4, 0 0 Z" transform={`rotate(${a})`} fill="currentColor" opacity={a % 120 ? 0.75 : 1} />
-          ))}
-          <circle r="3.2" fill="var(--pop)" />
-        </svg>
-      ) : (
-        <svg viewBox="0 0 24 24" width={size * 0.66} height={size * 0.66}>
-          <path d="M2 20 L9.5 7 L13 13 L15.5 9.5 L22 20 Z" fill="currentColor" />
-          <path d="M9.5 7 L11.6 10.6 L10.2 10.2 L8.6 11.2 L7.9 9.8 Z" fill="var(--pop)" />
-        </svg>
-      )}
+    <span className="block shrink-0 overflow-hidden rounded-[28%] [[data-theme=summit]_&]:rounded-[8px] [[data-theme=summit]_&]:shadow-[2px_2px_0_var(--edge)]" style={{ width: size, height: size }} aria-hidden="true">
+      <svg viewBox="0 0 512 512" width={size} height={size}>
+        <defs>
+          <linearGradient id={`bm-${id}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#1f3d66" />
+            <stop offset="1" stopColor="#16201a" />
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" fill={`url(#bm-${id})`} />
+        <g transform="rotate(-90 256 256)" fill="none" strokeWidth="30" strokeLinecap="round">
+          <circle cx="256" cy="256" r="168" stroke="#9cc9f0" strokeDasharray="790 1056" />
+          <circle cx="256" cy="256" r="168" stroke="#6e9071" strokeDasharray="0 800 230 1056" />
+        </g>
+        <g transform="translate(256 256) scale(0.82) rotate(-30)" fill="#ffffff">
+          <rect x="-92" y="-14" width="184" height="28" rx="10" />
+          <rect x="-142" y="-78" width="40" height="156" rx="14" />
+          <rect x="102" y="-78" width="40" height="156" rx="14" />
+          <rect x="-176" y="-52" width="30" height="104" rx="11" />
+          <rect x="146" y="-52" width="30" height="104" rx="11" />
+          <rect x="-100" y="-22" width="12" height="44" rx="4" fill="#e2ad3b" />
+          <rect x="88" y="-22" width="12" height="44" rx="4" fill="#e2ad3b" />
+        </g>
+      </svg>
     </span>
   );
 }

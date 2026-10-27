@@ -73,6 +73,9 @@ function applyDocumentPrefs(p: Preferences) {
   root.dataset.mode = resolveMode(p.colorMode, systemDark());
   root.dataset.motion = p.reducedMotion;
   browserKV.set(KEYS.theme, { theme: p.theme, colorMode: p.colorMode, motion: p.reducedMotion });
+  // The phone's status bar (and the installed app's title bar) takes the theme's background.
+  const bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+  if (bg) document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", bg));
 }
 
 /** Older saved data can carry themes that no longer exist. */

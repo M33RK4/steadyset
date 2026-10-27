@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: { default: "Steadyset — workout planner", template: "%s · Steadyset" },
   description: "Follow your workout plan, log every set, rest with a reliable timer, train alongside a buddy and keep everything in sync across devices.",
   applicationName: "Steadyset",
+  appleWebApp: { capable: true, title: "Steadyset", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

@@ -14,6 +14,7 @@ import { Dialog, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { LilyFlower, Ridge } from "@/components/ui/ThemeArt";
 import type { ThemeId } from "@/lib/domain/types";
+import { promptInstall, useInstallState } from "@/lib/pwa/install";
 
 function Section({ id, title, children, description }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
@@ -104,6 +105,8 @@ export function SettingsScreen() {
           </div>
         </div>
       </Section>
+
+      <InstallSection />
 
       <Section title="Workout">
         <div className="space-y-5">
@@ -379,5 +382,43 @@ function ThemePreview({ theme }: { theme: ThemeId }) {
         </span>
       ))}
     </span>
+  );
+}
+
+function InstallSection() {
+  const state = useInstallState();
+  const toast = useToast();
+  return (
+    <Section id="app" title="Get the app" description="Install Steadyset on your phone: it gets its own icon, opens full-screen and works without a connection.">
+      {state === "installed" ? (
+        <p className="flex items-center gap-2 font-semibold text-done">
+          <Icon name="check" size={20} /> Steadyset is installed on this device.
+        </p>
+      ) : state === "available" ? (
+        <Button
+          icon="download"
+          onClick={async () => {
+            if (await promptInstall()) toast("Steadyset is on your home screen", { tone: "success" });
+          }}
+        >
+          Install app
+        </Button>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3 text-sm">
+          <div className="tile p-4 space-y-1">
+            <p className="font-bold">Android</p>
+            <p className="text-muted">
+              Open this page in Chrome, tap the <span className="font-bold text-ink">⋮</span> menu, then <span className="font-bold text-ink">Install app</span> (or <span className="font-bold text-ink">Add to Home screen</span>).
+            </p>
+          </div>
+          <div className="tile p-4 space-y-1">
+            <p className="font-bold">iPhone / iPad</p>
+            <p className="text-muted">
+              Open this page in Safari, tap <span className="font-bold text-ink">Share</span>, then <span className="font-bold text-ink">Add to Home Screen</span>.
+            </p>
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }
