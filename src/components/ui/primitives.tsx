@@ -11,11 +11,11 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "soft";
 type Size = "sm" | "md" | "lg" | "xl";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-accent-ink hover:brightness-110 active:brightness-95",
-  secondary: "bg-surface text-ink border border-line hover:bg-raised active:brightness-95",
+  primary: "btn bg-accent text-accent-ink hover:brightness-110",
+  secondary: "btn bg-surface text-ink hover:bg-raised [--btn-shadow:none] [border:1.5px_solid_var(--line)] [[data-theme=summit]_&]:[border:2px_solid_var(--edge)] [[data-theme=summit]_&]:[--btn-shadow:3px_3px_0_var(--edge)]",
   soft: "bg-accent-soft text-accent-text hover:brightness-[1.03] active:brightness-95",
   ghost: "text-ink hover:bg-raised active:bg-line",
-  danger: "bg-danger text-white hover:brightness-110 active:brightness-95",
+  danger: "btn bg-danger text-white hover:brightness-110 [--btn-shadow:none]",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm gap-1.5",
@@ -44,7 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cx(
-        "inline-flex items-center justify-center rounded-ctl font-semibold whitespace-nowrap select-none transition-[filter,background-color,transform] duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center rounded-btn font-bold whitespace-nowrap select-none transition-[filter,background-color,transform,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         block && "w-full",
@@ -73,8 +73,9 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cx(
-        "inline-flex items-center justify-center rounded-ctl shrink-0 transition-[filter,background-color] duration-150 disabled:opacity-40 disabled:pointer-events-none",
+        "inline-flex items-center justify-center rounded-btn shrink-0 transition-[filter,background-color] duration-150 disabled:opacity-40 disabled:pointer-events-none",
         variants[variant],
+        variant !== "ghost" && variant !== "soft" && "[--btn-shadow:none]",
         className,
       )}
       style={{ width: size, height: size }}
@@ -141,7 +142,7 @@ export function ProgressBar({ value, className, label }: { value: number; classN
   const v = Math.max(0, Math.min(1, value));
   return (
     <div
-      className={cx("h-2 rounded-pill bg-line overflow-hidden", className)}
+      className={cx("h-2.5 rounded-pill bg-accent-soft overflow-hidden", className)}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -192,7 +193,7 @@ export function Switch({ checked, onChange, label, description, disabled }: { ch
         onClick={() => onChange(!checked)}
         className={cx(
           "relative h-7 w-12 shrink-0 rounded-pill transition-colors duration-150 disabled:opacity-50",
-          checked ? "bg-accent" : "bg-line",
+          checked ? "bg-accent" : "bg-line [[data-theme=summit]_&]:bg-raised [[data-theme=summit]_&]:ring-2 [[data-theme=summit]_&]:ring-edge",
         )}
       >
         <span
@@ -217,7 +218,7 @@ export function Segmented<T extends string | number>({
   size?: "sm" | "md";
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex p-1 rounded-ctl bg-raised border border-line gap-1">
+    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap p-1 rounded-btn bg-raised border border-line gap-1 [[data-theme=summit]_&]:border-2 [[data-theme=summit]_&]:border-edge">
       {options.map((o) => (
         <button
           key={String(o.value)}
@@ -226,9 +227,9 @@ export function Segmented<T extends string | number>({
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
           className={cx(
-            "rounded-[calc(var(--r-ctl)-4px)] font-semibold transition-colors duration-150",
+            "rounded-[max(calc(var(--r-btn)-4px),4px)] font-bold transition-colors duration-150",
             size === "sm" ? "px-2.5 h-8 text-sm" : "px-3.5 h-9 text-[15px]",
-            o.value === value ? "bg-surface text-ink shadow-sm border border-line" : "text-muted hover:text-ink border border-transparent",
+            o.value === value ? "bg-accent text-accent-ink" : "text-muted hover:text-ink",
           )}
         >
           {o.label}
@@ -241,10 +242,10 @@ export function Segmented<T extends string | number>({
 export function EmptyState({ icon, title, children, action }: { icon: IconName; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center text-center px-6 py-10 gap-3">
-      <div className="h-14 w-14 rounded-pill bg-accent-soft text-accent-text grid place-items-center">
-        <Icon name={icon} size={26} />
+      <div className="h-16 w-16 rounded-btn bg-accent-soft text-accent-text grid place-items-center rotate-[-4deg]">
+        <Icon name={icon} size={28} />
       </div>
-      <h3 className="text-lg">{title}</h3>
+      <h3 className="text-xl">{title}</h3>
       {children && <div className="text-muted max-w-sm">{children}</div>}
       {action}
     </div>
@@ -266,11 +267,12 @@ export function Badge({ tone = "neutral", children, className }: { tone?: "neutr
   return <span className={cx("inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-xs font-semibold", tones[tone], className)}>{children}</span>;
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, actions, eyebrow }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; eyebrow?: string }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <header className="flex flex-wrap items-end justify-between gap-3 mb-7">
       <div className="min-w-0">
-        <h1 className="text-3xl md:text-4xl leading-tight">{title}</h1>
+        {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
+        <h1 className="text-4xl md:text-5xl">{title}</h1>
         {subtitle && <p className="text-muted mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -304,7 +306,7 @@ export function NumberStepper({
       <label htmlFor={id} className="text-sm font-semibold text-muted block">
         {label}
       </label>
-      <div className="flex items-stretch rounded-ctl border border-line bg-surface overflow-hidden h-12">
+      <div className="flex items-stretch rounded-ctl border-[1.5px] border-line bg-surface overflow-hidden h-12 [[data-theme=summit]_&]:border-2 [[data-theme=summit]_&]:border-edge">
         <button type="button" aria-label={`Decrease ${label}`} className="w-12 grid place-items-center hover:bg-raised" onClick={() => onChange(clamp((value ?? min + step) - step))}>
           <Icon name="minus" size={18} />
         </button>

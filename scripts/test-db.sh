@@ -13,3 +13,4 @@ PSQL=("$PGBIN/psql" -h "$TMP" -p "$PORT" -U postgres -d postgres -v ON_ERROR_STO
 "${PSQL[@]}" -f supabase/tests/supabase_stub.sql
 for f in supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
 "${PSQL[@]}" -f supabase/tests/rls_test.sql
+"${PSQL[@]}" -f supabase/tests/buddies_test.sql

@@ -1,4 +1,5 @@
 import type { AppData, Preferences, TableName } from "../domain/types";
+import { normalizePreferences } from "../themes";
 
 /** Postgres table for each in-app collection. */
 export const DB_TABLE: Record<TableName, string> = {
@@ -135,6 +136,7 @@ export function fromRow<T>(table: TableName, row: Record<string, unknown>): T {
 
 const PREF_COLUMNS: Record<keyof Preferences, string> = {
   theme: "theme",
+  colorMode: "color_mode",
   units: "units",
   defaultRestSeconds: "default_rest_seconds",
   soundEnabled: "sound_enabled",
@@ -159,7 +161,7 @@ export function prefsToRow(p: Preferences, userId: string) {
 export function prefsFromRow(row: Record<string, unknown>, fallback: Preferences): Preferences {
   const out = { ...fallback } as Record<string, unknown>;
   for (const [k, col] of Object.entries(PREF_COLUMNS)) if (row[col] !== undefined && row[col] !== null) out[k] = row[col];
-  return out as unknown as Preferences;
+  return normalizePreferences(out as unknown as Preferences);
 }
 
 export const ALL_TABLES: TableName[] = ["exercises", "plans", "planDays", "planExercises", "overrides", "sessions", "sessionExercises", "sets", "measurements"];

@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Every colour, font and radius in the UI goes through these variables, and
- * each theme only redefines the variables — so all four themes cover every screen, dialog
- * and timer automatically.
+ * Design tokens. Every colour, font, radius and edge in the UI goes through these variables.
+ * Two themes — Lily and Summit — each with a light and a dark variant, chosen with
+ * <html data-theme="lily|summit" data-mode="light|dark">. Every screen, dialog and timer
+ * follows automatically.
  */
 @theme inline {
   --color-bg: var(--bg);
@@ -12,10 +13,13 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-accent-text: var(--accent-text);
+  --color-pop: var(--pop);
+  --color-heart: var(--heart);
   --color-done: var(--done);
   --color-done-soft: var(--done-soft);
   --color-partial: var(--partial);
@@ -27,124 +31,184 @@
   --font-num: var(--num-font);
   --radius-card: var(--r-card);
   --radius-ctl: var(--r-ctl);
+  --radius-btn: var(--r-btn);
   --radius-pill: 999px;
 }
 
-/* ---- Theme A · Blush: rose and plum on soft pink ---- */
+/* ================================================================ Lily — light
+   Baby blue sky, white lilies with sage stems and a gold stamen. Soft, airy, serif. */
 :root,
-[data-theme="blush"] {
+[data-theme="lily"] {
   color-scheme: light;
-  --bg: #fbf2f3;
+  --bg: #e9f3fc;
+  --bg-glow: #d5e8f8;
   --surface: #ffffff;
-  --raised: #fdf7f8;
-  --ink: #3b2229;
-  --muted: #8a6870;
-  --line: #f0dbe0;
-  --accent: #c8476b;
+  --raised: #f2f8fe;
+  --ink: #1b3150;
+  --muted: #5b7694;
+  --line: #d3e4f3;
+  --edge: #d3e4f3;
+  --accent: #2f6fae;
   --accent-ink: #ffffff;
-  --accent-soft: #fbe1e8;
-  --accent-text: #a8324f;
-  --done: #2f8f6b;
-  --done-soft: #def3ea;
-  --partial: #c07a17;
-  --partial-soft: #fbedd5;
-  --danger: #b4322e;
-  --danger-soft: #fbe3e1;
-  --display-font: var(--font-fraunces), Georgia, serif;
-  --body-font: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  --num-font: var(--font-fraunces), Georgia, serif;
-  --display-weight: 560;
-  --r-card: 22px;
-  --r-ctl: 14px;
-  --shadow: 0 1px 2px rgb(120 40 60 / 0.06), 0 8px 24px -12px rgb(160 50 80 / 0.18);
-  --hero: linear-gradient(135deg, #f9d7e0 0%, #fbeef1 55%, #fff 100%);
+  --accent-soft: #dcebf9;
+  --accent-text: #245d98;
+  --pop: #e2ad3b;
+  --heart: #4f97dd;
+  --done: #2b8466;
+  --done-soft: #ddf1e8;
+  --partial: #b0701a;
+  --partial-soft: #faeed8;
+  --danger: #c0392b;
+  --danger-soft: #fbe5e2;
+
+  --petal: #ffffff;
+  --petal-shade: #cfe3f7;
+  --petal-line: #86b3dd;
+  --stem: #7aa996;
+  --leaf: #a9cfbb;
+  --stamen: #e2ad3b;
+
+  --display-font: var(--font-instrument), "Times New Roman", serif;
+  --body-font: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-instrument), "Times New Roman", serif;
+  --display-weight: 400;
+  --display-tracking: -0.015em;
+  --display-case: none;
+  --r-card: 28px;
+  --r-ctl: 16px;
+  --r-btn: 999px;
+  --card-border: 1px solid var(--line);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 22px 44px -30px rgb(47 111 174 / 0.45), 0 2px 8px -4px rgb(47 111 174 / 0.12);
+  --btn-border: 0 solid transparent;
+  --btn-shadow: 0 10px 22px -12px rgb(47 111 174 / 0.75);
+  --btn-press: translateY(1px) scale(0.985);
+  --hero: radial-gradient(120% 140% at 100% 0%, #cfe5f8 0%, #e6f1fb 45%, #ffffff 100%);
+  --dock: rgb(255 255 255 / 0.82);
 }
 
-/* ---- Theme B · Ember: charcoal and black with orange ---- */
-[data-theme="ember"] {
+/* ================================================================ Lily — dark
+   Midnight blue with moonlit lilies. */
+[data-theme="lily"][data-mode="dark"] {
   color-scheme: dark;
-  --bg: #121212;
-  --surface: #1c1c1c;
-  --raised: #242424;
-  --ink: #f3f1ee;
-  --muted: #a39d96;
-  --line: #2f2f2f;
-  --accent: #ff7a1a;
-  --accent-ink: #160b02;
-  --accent-soft: #3a2413;
-  --accent-text: #ff9a4d;
-  --done: #4cc38a;
-  --done-soft: #17352a;
-  --partial: #f5c04a;
-  --partial-soft: #3a3019;
-  --danger: #ff6a5c;
-  --danger-soft: #3d1d1a;
-  --display-font: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
-  --body-font: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
-  --num-font: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
-  --display-weight: 700;
+  --bg: #0b1524;
+  --bg-glow: #13284a;
+  --surface: #12213a;
+  --raised: #182a46;
+  --ink: #e6f0fb;
+  --muted: #93abc6;
+  --line: #233a5a;
+  --edge: #233a5a;
+  --accent: #9cc9f0;
+  --accent-ink: #0b1524;
+  --accent-soft: #1c3556;
+  --accent-text: #acd4f6;
+  --pop: #f0cf7a;
+  --heart: #9cc9f0;
+  --done: #62cf9f;
+  --done-soft: #133427;
+  --partial: #f0b955;
+  --partial-soft: #3a2e14;
+  --danger: #ff8a7a;
+  --danger-soft: #3d1c1a;
+
+  --petal: #dbeafa;
+  --petal-shade: #94bbe2;
+  --petal-line: #5f8fc2;
+  --stem: #4c8673;
+  --leaf: #2f5f50;
+  --stamen: #f0cf7a;
+
+  --shadow: 0 1px 0 rgb(156 201 240 / 0.06) inset, 0 24px 48px -28px rgb(0 0 0 / 0.75);
+  --btn-shadow: 0 10px 26px -12px rgb(156 201 240 / 0.45);
+  --hero: radial-gradient(120% 140% at 100% 0%, #1f3d66 0%, #152a48 45%, #12213a 100%);
+  --dock: rgb(18 33 58 / 0.86);
+}
+
+/* ================================================================ Summit — light
+   Sand paper, pine green and brass. Bold grotesk type, solid edges and hard shadows,
+   like a trail map. */
+[data-theme="summit"] {
+  color-scheme: light;
+  --bg: #ece7da;
+  --bg-glow: #e3dcc9;
+  --surface: #f9f6ee;
+  --raised: #f1ece0;
+  --ink: #1c2a22;
+  --muted: #5c695f;
+  --line: #d3cab4;
+  --edge: #1c2a22;
+  --accent: #2f5d46;
+  --accent-ink: #f7f2e4;
+  --accent-soft: #dbe5d5;
+  --accent-text: #2a5640;
+  --pop: #d4862a;
+  --heart: #d4862a;
+  --done: #2f7d4f;
+  --done-soft: #dcebd9;
+  --partial: #a9650f;
+  --partial-soft: #f4e2c4;
+  --danger: #b23a2a;
+  --danger-soft: #f5ddd6;
+
+  --ridge-far: #b9c4a6;
+  --ridge-mid: #6e9071;
+  --ridge-near: #2f5d46;
+  --sun: #d4862a;
+  --topo: #1c2a22;
+
+  --display-font: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --body-font: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 800;
+  --display-tracking: -0.025em;
+  --display-case: none;
   --r-card: 10px;
   --r-ctl: 8px;
-  --shadow: 0 0 0 1px #262626;
-  --hero: linear-gradient(120deg, #1f1f1f 0%, #1a1a1a 60%, #2a1a0e 100%);
+  --r-btn: 8px;
+  --card-border: 2px solid var(--edge);
+  --shadow: 4px 4px 0 var(--edge);
+  --btn-border: 2px solid var(--edge);
+  --btn-shadow: 3px 3px 0 var(--edge);
+  --btn-press: translate(2px, 2px);
+  --hero: linear-gradient(180deg, #f7f1e1 0%, #f3ecda 100%);
+  --dock: rgb(249 246 238 / 0.94);
 }
 
-/* ---- Theme C · Paper: minimal light ---- */
-[data-theme="paper"] {
-  color-scheme: light;
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --raised: #f6f6f6;
-  --ink: #161616;
-  --muted: #6b6b6b;
-  --line: #e3e3e3;
-  --accent: #161616;
-  --accent-ink: #ffffff;
-  --accent-soft: #efefef;
-  --accent-text: #161616;
-  --done: #1f7a52;
-  --done-soft: #e5f3ec;
-  --partial: #a3620a;
-  --partial-soft: #f7ecdc;
-  --danger: #b3261e;
-  --danger-soft: #f9e4e2;
-  --display-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --body-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --num-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --r-card: 12px;
-  --r-ctl: 10px;
-  --shadow: none;
-  --hero: #ffffff;
-}
-
-/* ---- Theme D · Graphite: minimal dark ---- */
-[data-theme="graphite"] {
+/* ================================================================ Summit — dark
+   Night forest with a brass moon. */
+[data-theme="summit"][data-mode="dark"] {
   color-scheme: dark;
-  --bg: #0f0f0f;
-  --surface: #181818;
-  --raised: #202020;
-  --ink: #f4f4f4;
-  --muted: #9a9a9a;
-  --line: #2b2b2b;
-  --accent: #f4f4f4;
-  --accent-ink: #0f0f0f;
-  --accent-soft: #2a2a2a;
-  --accent-text: #f4f4f4;
-  --done: #5ccf95;
-  --done-soft: #16301f;
-  --partial: #e9b949;
-  --partial-soft: #332a14;
-  --danger: #ff7b72;
-  --danger-soft: #3a1a18;
-  --display-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --body-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --num-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --r-card: 12px;
-  --r-ctl: 10px;
-  --shadow: none;
-  --hero: #181818;
+  --bg: #0e1511;
+  --bg-glow: #142019;
+  --surface: #16201a;
+  --raised: #1c2821;
+  --ink: #ebe8dc;
+  --muted: #9aa79b;
+  --line: #2b3a30;
+  --edge: #3d5244;
+  --accent: #e0a54a;
+  --accent-ink: #17110a;
+  --accent-soft: #382a13;
+  --accent-text: #efb861;
+  --pop: #e0a54a;
+  --heart: #e0a54a;
+  --done: #72cf92;
+  --done-soft: #163222;
+  --partial: #f0b955;
+  --partial-soft: #3a2e14;
+  --danger: #ff7f6e;
+  --danger-soft: #3e1d18;
+
+  --ridge-far: #22362a;
+  --ridge-mid: #2c4637;
+  --ridge-near: #3c5d48;
+  --sun: #e9dcae;
+  --topo: #e9eadf;
+
+  --shadow: 4px 4px 0 #050806;
+  --btn-shadow: 3px 3px 0 #050806;
+  --hero: linear-gradient(180deg, #1b2a21 0%, #16201a 100%);
+  --dock: rgb(22 32 26 / 0.94);
 }
 
 @layer base {
@@ -156,7 +220,6 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--body-font);
-    font-feature-settings: "tnum" 0;
     -webkit-font-smoothing: antialiased;
     min-height: 100dvh;
   }
@@ -165,22 +228,15 @@
   h3 {
     font-family: var(--display-font);
     font-weight: var(--display-weight);
-    letter-spacing: -0.01em;
+    letter-spacing: var(--display-tracking);
+    text-transform: var(--display-case);
     text-wrap: balance;
-  }
-  [data-theme="ember"] h1,
-  [data-theme="ember"] h2 {
-    text-transform: uppercase;
-    letter-spacing: 0.01em;
+    line-height: 1.08;
   }
   :focus-visible {
     outline: 3px solid var(--accent);
     outline-offset: 2px;
     border-radius: 6px;
-  }
-  [data-theme="paper"] :focus-visible,
-  [data-theme="graphite"] :focus-visible {
-    outline-color: #3b82f6;
   }
   ::selection {
     background: var(--accent-soft);
@@ -195,9 +251,23 @@
 @layer components {
   .card {
     background: var(--surface);
-    border: 1px solid var(--line);
+    border: var(--card-border);
     border-radius: var(--r-card);
     box-shadow: var(--shadow);
+  }
+  /* A quieter card for nested content. */
+  .tile {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+  }
+  .btn {
+    border: var(--btn-border);
+    box-shadow: var(--btn-shadow);
+  }
+  .btn:active {
+    transform: var(--btn-press);
+    box-shadow: none;
   }
   .num {
     font-family: var(--num-font);
@@ -206,17 +276,26 @@
   .hero-surface {
     background: var(--hero);
   }
+  .eyebrow {
+    font-family: var(--body-font);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+  }
   .field {
     width: 100%;
     background: var(--surface);
     color: var(--ink);
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: var(--r-ctl);
-    padding: 0.7rem 0.85rem;
-    min-height: 46px;
+    padding: 0.7rem 0.95rem;
+    min-height: 48px;
   }
   .field:focus-visible {
     outline-offset: 0;
+    border-color: var(--accent);
   }
   .field::placeholder {
     color: var(--muted);
@@ -228,6 +307,43 @@
     animation: shimmer 1.4s linear infinite;
     border-radius: var(--r-ctl);
   }
+  .dock {
+    background: var(--dock);
+    border: var(--card-border);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+}
+
+/* Lily: headings breathe a little more, and <em> inside a heading turns to italic accent. */
+[data-theme="lily"] h1 {
+  letter-spacing: -0.02em;
+}
+[data-theme="lily"] h1 em,
+[data-theme="lily"] h2 em {
+  font-style: italic;
+  color: var(--accent-text);
+}
+[data-theme="lily"] .eyebrow {
+  letter-spacing: 0.2em;
+}
+/* Summit: emphasised words get a brass underline stroke, labels get a trail-marker dash. */
+[data-theme="summit"] h1 em,
+[data-theme="summit"] h2 em {
+  font-style: normal;
+  background: linear-gradient(transparent 68%, color-mix(in srgb, var(--pop) 55%, transparent) 68%);
+}
+[data-theme="summit"] .eyebrow {
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+[data-theme="summit"] .eyebrow::before {
+  content: "";
+  width: 1.1em;
+  height: 3px;
+  background: var(--pop);
 }
 
 @keyframes shimmer {
@@ -238,7 +354,7 @@
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
 }
 @keyframes pop {
@@ -256,20 +372,89 @@
 }
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: var(--btn-shadow), 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 12px transparent;
+    box-shadow: var(--btn-shadow), 0 0 0 14px transparent;
+  }
+}
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+@keyframes heart-rise {
+  0% {
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+    transform: translate(calc(var(--drift) * 0.15), -12vh) scale(1) rotate(calc(var(--spin) * 0.3));
+  }
+  78% {
+    opacity: 1;
+    transform: translate(calc(var(--drift) * 0.8), -72vh) scale(0.95) rotate(calc(var(--spin) * 0.8));
+  }
+  100% {
+    transform: translate(var(--drift), -92vh) scale(0.85) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+@keyframes heart-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes tick-in {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes live-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
   }
 }
 .anim-page {
-  animation: rise-in 0.28s ease-out both;
+  animation: rise-in 0.32s ease-out both;
 }
 .anim-pop {
   animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 .anim-pulse {
   animation: pulse-ring 2.4s ease-out infinite;
+}
+.anim-sway {
+  transform-origin: 50% 100%;
+  animation: sway 7s ease-in-out infinite;
+}
+.anim-tick {
+  animation: tick-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+.anim-live {
+  animation: live-dot 1.6s ease-in-out infinite;
 }
 
 /* Reduced motion: honour the OS setting unless the user explicitly allowed motion, and always
@@ -296,9 +481,8 @@
 .brand {
   font-family: var(--display-font);
   font-weight: var(--display-weight);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--display-tracking);
 }
-[data-theme="ember"] .brand {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+[data-theme="lily"] .brand {
+  font-style: italic;
 }

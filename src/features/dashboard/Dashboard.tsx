@@ -12,6 +12,9 @@ import { Icon } from "@/components/ui/Icon";
 import { greeting, useCalendarContext, useExercises, useToday } from "../common";
 import { LogActivityDialog, useStartWorkout } from "../workout/useStartWorkout";
 import { StatusDot } from "../calendar/StatusDot";
+import { HeroArt } from "@/components/ui/ThemeArt";
+import { BuddyStrip } from "../buddies/BuddyLive";
+import { useBuddies } from "../buddies/BuddiesProvider";
 
 export function Dashboard() {
   const { data, prefs } = useApp();
@@ -37,19 +40,18 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-muted font-medium">{formatLongDate(today)}</p>
-        <h1 className="text-3xl md:text-4xl mt-1">
-          {greeting()}
-          {name ? `, ${name}` : ""}
+        <p className="eyebrow">{formatLongDate(today)}</p>
+        <h1 className="text-5xl md:text-6xl mt-3">
+          <Greeting name={name} />
         </h1>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
         <TodayCard day={todayDay} running={running?.id ?? null} onStart={() => start(todayDay.planned, today)} onLog={() => setLogOpen(true)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
 
-        <section className="card p-5 space-y-5" aria-labelledby="week-h">
+        <section className="card p-6 space-y-5" aria-labelledby="week-h">
           <div className="flex items-center justify-between">
-            <h2 id="week-h" className="text-lg">
+            <h2 id="week-h" className="text-2xl">
               This week
             </h2>
             <Link href="/calendar" className="text-sm font-semibold text-accent-text hover:underline">
@@ -86,8 +88,8 @@ export function Dashboard() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <section className="card p-5" aria-labelledby="up-h">
-          <h2 id="up-h" className="text-lg mb-3">
+        <section className="card p-6" aria-labelledby="up-h">
+          <h2 id="up-h" className="text-2xl mb-3">
             Coming up
           </h2>
           {upcoming.length ? (
@@ -115,9 +117,9 @@ export function Dashboard() {
           )}
         </section>
 
-        <section className="card p-5" aria-labelledby="recent-h">
+        <section className="card p-6" aria-labelledby="recent-h">
           <div className="flex items-center justify-between mb-3">
-            <h2 id="recent-h" className="text-lg">
+            <h2 id="recent-h" className="text-2xl">
               Recent workouts
             </h2>
             {hasHistory && (
@@ -153,6 +155,8 @@ export function Dashboard() {
         </section>
       </div>
 
+      <BuddiesRow />
+
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={today} day={todayDay.planned} kind={todayDay.planned?.kind === "cardio" ? "cardio" : "activity"} />
     </div>
   );
@@ -168,11 +172,12 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
     const s = data.sessions.find((x) => x.id === running)!;
     const p = sessionProgress(data, running);
     return (
-      <section className="card hero-surface p-6 flex flex-col gap-4" aria-labelledby="today-h">
+      <section className="card hero-surface relative overflow-hidden [&>:not(.hero-art)]:relative p-6 md:p-8 pb-32 md:pb-36 [[data-theme=lily]_&]:pb-8 flex flex-col gap-4" aria-labelledby="today-h">
+        <HeroArt />
         <Badge tone="accent" className="self-start">
           In progress
         </Badge>
-        <h2 id="today-h" className="text-2xl md:text-3xl">
+        <h2 id="today-h" className="relative text-4xl md:text-5xl">
           {s.title}
         </h2>
         <p className="text-muted">
@@ -180,7 +185,7 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
         </p>
         <Link
           href="/workout"
-          className="self-start inline-flex items-center gap-2.5 h-16 px-6 rounded-ctl bg-accent text-accent-ink font-semibold text-lg hover:brightness-110"
+          className="btn relative self-start inline-flex items-center gap-2.5 h-16 px-7 rounded-btn bg-accent text-accent-ink font-bold text-lg hover:brightness-110"
         >
           <Icon name="play" size={24} /> Resume workout
         </Link>
@@ -190,17 +195,18 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
 
   if (!planned || planned.kind === "rest") {
     return (
-      <section className="card hero-surface p-6 flex flex-col gap-3" aria-labelledby="today-h">
-        <div className="h-12 w-12 rounded-pill bg-accent-soft text-accent-text grid place-items-center">
+      <section className="card hero-surface relative overflow-hidden [&>:not(.hero-art)]:relative p-6 md:p-8 pb-32 md:pb-36 [[data-theme=lily]_&]:pb-8 flex flex-col gap-3" aria-labelledby="today-h">
+        <HeroArt />
+        <div className="relative h-12 w-12 rounded-btn bg-accent-soft text-accent-text grid place-items-center">
           <Icon name="bed" size={24} />
         </div>
-        <h2 id="today-h" className="text-2xl md:text-3xl">
+        <h2 id="today-h" className="relative text-4xl md:text-5xl">
           {doneSession ? "Nice work today" : planned ? "Rest day" : "Nothing scheduled today"}
         </h2>
         <p className="text-muted max-w-md">
           {planned ? "Recovery is when your muscles adapt. A gentle walk or some stretching is plenty." : day.skippedDay ? "You moved or skipped today's workout." : "Enjoy the day, or start a workout anyway."}
         </p>
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="relative flex flex-wrap gap-2 mt-2">
           <Button variant="secondary" icon="walk" onClick={onLog}>
             Log an activity
           </Button>
@@ -213,14 +219,16 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
   }
 
   return (
-    <section className="card hero-surface p-6 flex flex-col gap-4" aria-labelledby="today-h">
+    <section className="card hero-surface relative overflow-hidden [&>:not(.hero-art)]:relative p-6 md:p-8 pb-32 md:pb-36 [[data-theme=lily]_&]:pb-8 flex flex-col gap-4" aria-labelledby="today-h">
+        <HeroArt />
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="accent">Today</Badge>
         {doneSession && <Badge tone={doneSession.status === "completed" ? "done" : "partial"}>{doneSession.status === "completed" ? "Completed" : "Partially completed"}</Badge>}
         {day.plannedSource === "moved" && <Badge>Moved here</Badge>}
       </div>
       <div>
-        <h2 id="today-h" className="text-3xl md:text-4xl">
+        <p className="eyebrow">Today's session</p>
+        <h2 id="today-h" className="text-4xl md:text-5xl mt-2">
           {planned.name}
         </h2>
         <p className="text-muted mt-1">
@@ -228,7 +236,7 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
         </p>
       </div>
       {exs.length > 0 && (
-        <ol className="grid gap-y-1.5 text-[15px] max-w-xl">
+        <ol className="relative grid gap-y-2 text-[15px] max-w-md rounded-ctl bg-surface/75 backdrop-blur-sm p-3 -mx-1 [[data-theme=summit]_&]:bg-transparent [[data-theme=summit]_&]:backdrop-blur-none [[data-theme=summit]_&]:p-0 [[data-theme=summit]_&]:mx-0">
           {exs.map((e, i) => (
             <li key={e.id} className="flex items-baseline gap-2 min-w-0">
               <span className="num text-muted w-5 text-right shrink-0">{i + 1}</span>
@@ -238,7 +246,7 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
           ))}
         </ol>
       )}
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="relative flex flex-wrap gap-2 pt-1">
         {planned.kind === "activity" ? (
           <Button size="xl" icon="walk" onClick={onLog} className="w-full sm:w-auto">
             Log activity
@@ -266,7 +274,7 @@ function WeekStrip({ days, today }: { days: CalendarDay[]; today: string }) {
       {days.map((d) => {
         const label = d.planned ? d.planned.name : d.skippedDay ? "Skipped" : "No workout";
         return (
-          <li key={d.date} className={cx("flex flex-col items-center gap-1.5 rounded-ctl py-2", d.isToday && "ring-2 ring-accent bg-accent-soft/50")}>
+          <li key={d.date} className={cx("flex flex-col items-center gap-1.5 rounded-btn py-2.5", d.isToday && "bg-accent-soft ring-2 ring-accent")}>
             <span className={cx("text-xs font-semibold", d.isToday ? "text-accent-text" : "text-muted")}>{WEEKDAY_SHORT[weekdayOf(d.date)]}</span>
             <span className="num text-sm font-semibold">{Number(d.date.slice(8))}</span>
             <StatusDot status={d.status} size={18} />
@@ -283,9 +291,36 @@ function WeekStrip({ days, today }: { days: CalendarDay[]; today: string }) {
 
 function DateChip({ date }: { date: string }) {
   return (
-    <span className="w-12 shrink-0 rounded-ctl bg-raised border border-line text-center py-1 leading-tight">
-      <span className="block text-[11px] font-semibold text-muted">{WEEKDAY_SHORT[weekdayOf(date)]}</span>
-      <span className="block num font-bold">{Number(date.slice(8))}</span>
+    <span className="w-12 shrink-0 rounded-ctl bg-accent-soft text-accent-text text-center py-1.5 leading-tight">
+      <span className="block text-[10px] font-extrabold uppercase tracking-wider">{WEEKDAY_SHORT[weekdayOf(date)]}</span>
+      <span className="block num text-xl font-bold">{Number(date.slice(8))}</span>
     </span>
   );
+}
+
+/** "Good evening, Sam" with the name (or the time of day) set in the theme's accent style. */
+function Greeting({ name }: { name: string }) {
+  const g = greeting();
+  if (name) return <>{g}, <em>{name}</em></>;
+  const [first, ...rest] = g.split(" ");
+  return <>{first} <em>{rest.join(" ")}</em></>;
+}
+
+function BuddiesRow() {
+  const { available, buddies, setupMissing } = useBuddies();
+  if (!available || setupMissing) return null;
+  if (!buddies.length)
+    return (
+      <Link href="/buddies" className="tile p-4 flex items-center gap-3 hover:brightness-[1.02]">
+        <span className="h-11 w-11 rounded-btn bg-accent-soft text-accent-text grid place-items-center shrink-0">
+          <Icon name="users" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-bold">Train with a buddy</span>
+          <span className="block text-sm text-muted">See each other's sets tick off live and send hearts.</span>
+        </span>
+        <Icon name="chevronRight" size={18} className="text-muted" />
+      </Link>
+    );
+  return <BuddyStrip title="Your buddies" />;
 }

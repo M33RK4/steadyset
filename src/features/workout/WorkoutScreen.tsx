@@ -36,6 +36,7 @@ import { DAY_KIND_LABEL, useExercises, useToday } from "../common";
 import { useStartWorkout } from "./useStartWorkout";
 import { ExercisePicker } from "../plans/ExercisePicker";
 import { uuid } from "@/lib/util/ids";
+import { BuddyStrip } from "../buddies/BuddyLive";
 
 export function WorkoutScreen() {
   const { active, data, setActive } = useApp();
@@ -64,7 +65,10 @@ function StartChooser() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl">Start a workout</h1>
+        <p className="eyebrow">Ready?</p>
+        <h1 className="text-4xl md:text-5xl mt-2">
+          Start a <em>workout</em>
+        </h1>
         <p className="text-muted mt-1">Pick a day from your plan, or start an empty session and add exercises as you go.</p>
       </header>
       {plan ? (
@@ -144,7 +148,8 @@ function ActiveWorkout() {
           <Icon name="chevronLeft" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl truncate">{session.title}</h1>
+          <p className="eyebrow">Workout in progress</p>
+          <h1 className="text-3xl md:text-4xl truncate mt-1">{session.title}</h1>
           <p className="text-sm text-muted flex flex-wrap gap-x-3">
             <span className="num">{formatClock(elapsed)} elapsed</span>
             <span>
@@ -158,6 +163,7 @@ function ActiveWorkout() {
         </Button>
       </div>
       <ProgressBar value={prog.total ? prog.completed / prog.total : 0} label="Workout progress" />
+      <BuddyStrip onlyLive title="Training with you right now" />
 
       {timerVisible ? (
         <RestPanel current={current} />

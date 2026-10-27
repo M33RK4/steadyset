@@ -12,12 +12,13 @@ import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
 import { Button, Field, NumberStepper, PageHeader, Segmented, Switch, cx } from "@/components/ui/primitives";
 import { Dialog, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
-import { Swatch } from "@/components/shell/AppShell";
+import { LilyFlower, Ridge } from "@/components/ui/ThemeArt";
+import type { ThemeId } from "@/lib/domain/types";
 
 function Section({ id, title, children, description }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
     <section id={id} className="card p-5 scroll-mt-24" aria-labelledby={`${id ?? title}-h`}>
-      <h2 id={`${id ?? title}-h`} className="text-xl">
+      <h2 id={`${id ?? title}-h`} className="text-2xl">
         {title}
       </h2>
       {description && <p className="text-sm text-muted mt-1">{description}</p>}
@@ -56,27 +57,51 @@ export function SettingsScreen() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <PageHeader title="Settings" />
+      <PageHeader eyebrow="Make it yours" title="Settings" />
 
-      <Section title="Theme" description="Every theme includes every feature — pick the one you like looking at.">
-        <div className="grid sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Theme">
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={prefs.theme === t.id}
-              onClick={() => setPrefs({ theme: t.id })}
-              className={cx("flex items-center gap-3 rounded-ctl border-2 p-3 text-left", prefs.theme === t.id ? "border-accent bg-accent-soft/40" : "border-line hover:border-muted")}
-            >
-              <Swatch colors={t.swatch} size={40} />
-              <span className="flex-1">
-                <span className="block font-semibold">{t.name}</span>
-                <span className="block text-sm text-muted">{t.description}</span>
-              </span>
-              {prefs.theme === t.id && <Icon name="check" />}
-            </button>
-          ))}
+      <Section title="Appearance" description="Both themes have every feature, in a light and a dark version.">
+        <div className="space-y-5">
+          <div className="grid sm:grid-cols-2 gap-4" role="radiogroup" aria-label="Theme">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={prefs.theme === t.id}
+                onClick={() => setPrefs({ theme: t.id })}
+                className={cx("rounded-card border-2 p-2 text-left transition-colors", prefs.theme === t.id ? "border-accent" : "border-line hover:border-muted")}
+              >
+                <ThemePreview theme={t.id} />
+                <span className="flex items-center gap-2 px-2 pt-3 pb-1">
+                  <span className="flex-1">
+                    <span className="block font-bold">{t.name}</span>
+                    <span className="block text-sm text-muted">{t.description}</span>
+                  </span>
+                  {prefs.theme === t.id && (
+                    <span className="h-7 w-7 rounded-pill bg-accent text-accent-ink grid place-items-center shrink-0">
+                      <Icon name="check" size={16} strokeWidth={2.6} />
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              <span className="font-semibold block">Dark mode</span>
+              <span className="text-sm text-muted">Turns your theme into its dark version.</span>
+            </span>
+            <Segmented
+              label="Dark mode"
+              value={prefs.colorMode}
+              onChange={(v) => setPrefs({ colorMode: v })}
+              options={[
+                { value: "light", label: "Light" },
+                { value: "dark", label: "Dark" },
+                { value: "system", label: "Match device" },
+              ]}
+            />
+          </div>
         </div>
       </Section>
 
@@ -159,7 +184,7 @@ export function SettingsScreen() {
         </div>
       </Section>
 
-      <Section title="Display">
+      <Section id="display" title="Display">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="font-medium">First day of the week</span>
@@ -179,7 +204,7 @@ export function SettingsScreen() {
             />
           </div>
           <Switch label="Mark missed workouts in the calendar" checked={prefs.showMissed} onChange={(v) => setPrefs({ showMissed: v })} />
-          <Field label="Your name (for the greeting)">
+          <Field label="Your name" hint="Used in your greeting and shown to your buddies.">
             {(id) => <input id={id} className="field" value={prefs.displayName} maxLength={40} onChange={(e) => setPrefs({ displayName: e.target.value })} />}
           </Field>
         </div>
@@ -332,5 +357,27 @@ function DeleteDialog({ open, onClose }: { open: boolean; onClose: () => void })
         </Field>
       </div>
     </Dialog>
+  );
+}
+
+/** A tiny picture of each theme in both light and dark, drawn with that theme's own tokens. */
+function ThemePreview({ theme }: { theme: ThemeId }) {
+  return (
+    <span className="grid grid-cols-2 gap-1.5" aria-hidden="true">
+      {(["light", "dark"] as const).map((m) => (
+        <span key={m} data-theme={theme} data-mode={m} className="relative block h-28 overflow-hidden rounded-ctl" style={{ background: "var(--bg)" }}>
+          <span className="absolute left-2.5 top-2.5 right-8 h-3 rounded-pill" style={{ background: "var(--ink)", opacity: 0.85 }} />
+          <span className="absolute left-2.5 top-7 w-10 h-2 rounded-pill" style={{ background: "var(--muted)", opacity: 0.6 }} />
+          <span className="absolute z-10 left-2.5 bottom-2.5 h-6 w-16 rounded-btn" style={{ background: "var(--accent)", boxShadow: "0 0 0 2px var(--bg)" }} />
+          {theme === "lily" ? (
+            <svg viewBox="-60 -60 120 120" className="absolute -right-5 -bottom-5 w-24">
+              <LilyFlower rotate={14} />
+            </svg>
+          ) : (
+            <Ridge className="absolute inset-x-0 bottom-0 h-12 w-full" />
+          )}
+        </span>
+      ))}
+    </span>
   );
 }

@@ -12,6 +12,7 @@ import { SyncEngine, type Db } from "../sync/syncEngine";
 import { guestHasMeaningfulData, guestImportChanges } from "./migration";
 import { browserKV, KEYS } from "./persistence";
 import { signOut as authSignOut } from "../auth/auth";
+import { normalizePreferences, resolveMode } from "../themes";
 
 export type SyncState = {
   online: boolean;
@@ -63,12 +64,20 @@ function seedIfNeeded(d: AppData): { data: AppData; changes: Change[]; prefs: Pr
   return { data: { ...applyChanges(d, changes), preferences: prefs }, changes, prefs };
 }
 
+const systemDark = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true;
+
 function applyDocumentPrefs(p: Preferences) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   root.dataset.theme = p.theme;
+  root.dataset.mode = resolveMode(p.colorMode, systemDark());
   root.dataset.motion = p.reducedMotion;
-  browserKV.set(KEYS.theme, { theme: p.theme, motion: p.reducedMotion });
+  browserKV.set(KEYS.theme, { theme: p.theme, colorMode: p.colorMode, motion: p.reducedMotion });
+}
+
+/** Older saved data can carry themes that no longer exist. */
+function withNormalizedPrefs(d: AppData): AppData {
+  return { ...d, preferences: normalizePreferences({ ...DEFAULT_PREFERENCES, ...d.preferences }) };
 }
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
@@ -172,10 +181,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     engineRef.current = null;
     scopeRef.current = "guest";
     const stored = browserKV.get<AppData>(KEYS.guestData);
-    const base = stored ? { ...emptyAppData(), ...stored, preferences: { ...DEFAULT_PREFERENCES, ...stored.preferences } } : emptyAppData();
+    const base = stored ? withNormalizedPrefs({ ...emptyAppData(), ...stored }) : emptyAppData();
     // Keep a theme chosen before any data existed.
-    const themeOnly = browserKV.get<{ theme: Preferences["theme"]; motion: Preferences["reducedMotion"] }>(KEYS.theme);
-    if (!stored && themeOnly) base.preferences = { ...base.preferences, theme: themeOnly.theme, reducedMotion: themeOnly.motion };
+    const themeOnly = browserKV.get<{ theme: Preferences["theme"]; colorMode?: Preferences["colorMode"]; motion: Preferences["reducedMotion"] }>(KEYS.theme);
+    if (!stored && themeOnly)
+      base.preferences = normalizePreferences({ ...base.preferences, theme: themeOnly.theme, colorMode: themeOnly.colorMode ?? base.preferences.colorMode, reducedMotion: themeOnly.motion });
     const seeded = seedIfNeeded(base);
     dataRef.current = seeded.data;
     setData(seeded.data);
@@ -201,7 +211,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setUser(u);
       setMode("user");
       writeActive(browserKV.get<ActiveWorkout>(KEYS.userActive(u.id)));
-      const cached = engine.readCache();
+      const rawCache = engine.readCache();
+      const cached = rawCache ? withNormalizedPrefs(rawCache) : null;
       if (cached && !sameUser) {
         dataRef.current = cached;
         setData(cached);
@@ -311,6 +322,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       clearInterval(iv);
     };
   }, [flush, reload]);
+
+  // "Match device" follows the system's light/dark setting while the app is open.
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    const onChange = () => applyDocumentPrefs(dataRef.current.preferences);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // Keep the active workout consistent across tabs on the same device.
   useEffect(() => {

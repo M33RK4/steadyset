@@ -1,18 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Barlow, Barlow_Condensed, Figtree, Fraunces, Geist } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Serif, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
-const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree", display: "swap" });
-const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-barlow", display: "swap" });
-const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-barlow-condensed", display: "swap" });
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
+const instrument = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap" });
+const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Steadyset — workout planner", template: "%s · Steadyset" },
-  description: "Follow your workout plan, log every set, rest with a reliable timer and keep your training in sync across devices.",
+  description: "Follow your workout plan, log every set, rest with a reliable timer, train alongside a buddy and keep everything in sync across devices.",
   applicationName: "Steadyset",
 };
 
@@ -21,23 +19,18 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbf2f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#121212" },
+    { media: "(prefers-color-scheme: light)", color: "#e9f3fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1524" },
   ],
 };
 
-// Applies the saved theme before first paint so there's no flash of the wrong theme.
-const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem('steadyset:theme')||'null');if(t&&t.theme){document.documentElement.dataset.theme=t.theme;document.documentElement.dataset.motion=t.motion||'system';}}catch(e){}})();`;
+// Applies the saved theme and light/dark mode before first paint so there's no flash of the
+// wrong theme. Old theme ids from earlier versions are mapped to the new ones.
+const themeScript = `(function(){try{var d=document.documentElement,t=JSON.parse(localStorage.getItem('steadyset:theme')||'null')||{},o={blush:['lily','light'],paper:['lily','light'],ember:['summit','dark'],graphite:['summit','dark']}[t.theme],th=o?o[0]:(t.theme==='summit'?'summit':'lily'),m=t.colorMode||(o?o[1]:'system');if(m==='system')m=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=th;d.dataset.mode=m;d.dataset.motion=t.motion||'system';}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      data-theme="blush"
-      data-motion="system"
-      suppressHydrationWarning
-      className={`${fraunces.variable} ${figtree.variable} ${barlow.variable} ${barlowCondensed.variable} ${geist.variable}`}
-    >
+    <html lang="en" data-theme="lily" data-mode="light" data-motion="system" suppressHydrationWarning className={`${instrument.variable} ${bricolage.variable} ${manrope.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

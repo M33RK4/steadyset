@@ -4,22 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useApp } from "@/lib/store/AppStore";
-import { THEMES } from "@/lib/themes";
+import { THEMES, resolveMode } from "@/lib/themes";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Button, cx } from "@/components/ui/primitives";
 import { Dialog } from "@/components/ui/Dialog";
+import { Backdrop, BrandMark } from "@/components/ui/ThemeArt";
 import { TimerWatcher, useNow } from "@/lib/timer/TimerWatcher";
 import { remainingMs } from "@/lib/timer/restTimer";
 import { formatClock } from "@/lib/util/dates";
+import { liveOf, useBuddies } from "@/features/buddies/BuddiesProvider";
 import { ReminderWatcher } from "./ReminderWatcher";
 
-const NAV: { href: string; label: string; icon: IconName; mobile: boolean }[] = [
-  { href: "/", label: "Dashboard", icon: "home", mobile: true },
-  { href: "/workouts", label: "My Workouts", icon: "dumbbell", mobile: true },
-  { href: "/calendar", label: "Calendar", icon: "calendar", mobile: true },
-  { href: "/library", label: "Exercises", icon: "book", mobile: true },
-  { href: "/progress", label: "Progress", icon: "chart", mobile: true },
-  { href: "/settings", label: "Settings", icon: "settings", mobile: false },
+const NAV: { href: string; label: string; short: string; icon: IconName; dock: boolean }[] = [
+  { href: "/", label: "Today", short: "Today", icon: "home", dock: true },
+  { href: "/workouts", label: "My Workouts", short: "Plans", icon: "dumbbell", dock: true },
+  { href: "/calendar", label: "Calendar", short: "Calendar", icon: "calendar", dock: true },
+  { href: "/library", label: "Exercises", short: "Exercises", icon: "book", dock: false },
+  { href: "/progress", label: "Progress", short: "Progress", icon: "chart", dock: true },
+  { href: "/buddies", label: "Buddies", short: "Buddies", icon: "users", dock: true },
 ];
 
 function isActive(path: string, href: string) {
@@ -30,99 +32,86 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname() ?? "/";
   const { mode, configured, ready } = useApp();
   const bare = path.startsWith("/auth");
-  if (bare) return <div className="min-h-dvh">{children}</div>;
+  if (bare)
+    return (
+      <div className="min-h-dvh">
+        <Backdrop />
+        {children}
+      </div>
+    );
   const inWorkout = path === "/workout";
 
   return (
-    <div className="min-h-dvh md:pl-[248px]">
+    <div className="min-h-dvh flex flex-col">
       <TimerWatcher />
       <ReminderWatcher />
+      <Backdrop />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[80] bg-surface px-3 py-2 rounded-ctl">
         Skip to content
       </a>
 
-      {/* Desktop / tablet sidebar */}
-      <aside className="hidden md:flex flex-col gap-1 fixed left-0 top-0 w-[248px] h-dvh overflow-y-auto border-r border-line bg-surface px-4 py-6 z-30">
-        <Link href="/" className="flex items-center gap-2.5 px-2 mb-6">
-          <Logo />
-          <span className="brand text-xl">
-            Steadyset
-          </span>
-        </Link>
-        <nav aria-label="Main" className="flex flex-col gap-1">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              aria-current={isActive(path, n.href) ? "page" : undefined}
-              className={cx(
-                "flex items-center gap-3 rounded-ctl px-3 h-11 font-medium transition-colors",
-                isActive(path, n.href) ? "bg-accent-soft text-accent-text" : "text-muted hover:text-ink hover:bg-raised",
-              )}
-            >
-              <Icon name={n.icon} size={20} />
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto space-y-3">
-          <ThemeQuickSwitch />
-          <AccountBadge />
-        </div>
-      </aside>
-
-      <div className="min-w-0 min-h-dvh flex flex-col">
-        {/* Mobile top bar */}
-        <div className="md:hidden sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-line">
-          <div className="flex items-center justify-between h-14 px-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Logo />
-              <span className="brand text-lg">
-                Steadyset
-              </span>
-            </Link>
-            <div className="flex items-center gap-1">
-              <SyncDot />
-              <ThemeQuickSwitch compact />
-              <Link
-                href="/settings"
-                aria-label="Settings"
-                aria-current={isActive(path, "/settings") ? "page" : undefined}
-                className={cx("h-11 w-11 grid place-items-center rounded-ctl", isActive(path, "/settings") ? "text-accent-text bg-accent-soft" : "hover:bg-raised")}
-              >
-                <Icon name="settings" />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {ready && mode === "guest" && !inWorkout && <GuestBanner configured={configured} />}
-        {!inWorkout && <ResumeBanner />}
-        <GuestImportDialog />
-
-        <main id="main" className={cx("flex-1 w-full mx-auto px-4 md:px-8 pt-5 md:pt-8", inWorkout ? "max-w-3xl pb-10" : "max-w-6xl pb-28 md:pb-12")}>
-          {ready ? <div key={path} className="anim-page">{children}</div> : <ShellSkeleton />}
-        </main>
-      </div>
-
-      {/* Mobile bottom navigation */}
-      {!inWorkout && (
-        <nav aria-label="Main" className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]">
-          <ul className="grid grid-cols-5">
-            {NAV.filter((n) => n.mobile).map((n) => (
-              <li key={n.href}>
-                <Link
-                  href={n.href}
-                  aria-current={isActive(path, n.href) ? "page" : undefined}
-                  className={cx("flex flex-col items-center justify-center gap-0.5 h-16 text-[11px] font-semibold", isActive(path, n.href) ? "text-accent-text" : "text-muted")}
-                >
-                  <span className={cx("h-8 w-14 grid place-items-center rounded-pill transition-colors", isActive(path, n.href) && "bg-accent-soft")}>
-                    <Icon name={n.icon} size={21} />
-                  </span>
-                  {n.label === "My Workouts" ? "Workouts" : n.label === "Dashboard" ? "Home" : n.label}
-                </Link>
-              </li>
+      {/* Top bar: full navigation on desktop, brand + quick actions on phones */}
+      <header className="sticky top-0 z-40 px-3 md:px-6 pt-3">
+        <div className="dock mx-auto max-w-6xl rounded-card flex items-center gap-2 h-16 pl-3 pr-2 md:pl-4">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-auto lg:mr-4">
+            <BrandMark />
+            <span className="brand text-2xl leading-none">Steadyset</span>
+          </Link>
+          <nav aria-label="Main" className="hidden lg:flex items-center gap-1 mr-auto">
+            {NAV.map((n) => (
+              <NavLink key={n.href} href={n.href} active={isActive(path, n.href)} icon={n.icon} label={n.label} />
             ))}
+          </nav>
+          <SyncDot />
+          <ModeToggle />
+          <ThemeQuickSwitch />
+          <Link
+            href="/library"
+            aria-label="Exercises"
+            aria-current={isActive(path, "/library") ? "page" : undefined}
+            className={cx("lg:hidden h-11 w-11 grid place-items-center rounded-btn", isActive(path, "/library") ? "bg-accent-soft text-accent-text" : "hover:bg-raised")}
+          >
+            <Icon name="book" />
+          </Link>
+          <AccountButton active={isActive(path, "/settings")} />
+        </div>
+      </header>
+
+      {ready && mode === "guest" && !inWorkout && <GuestBanner configured={configured} />}
+      {!inWorkout && <ResumeBanner />}
+      <GuestImportDialog />
+
+      <main id="main" className={cx("flex-1 w-full mx-auto px-4 md:px-8 pt-6 md:pt-10", inWorkout ? "max-w-3xl pb-12" : "max-w-6xl pb-32 lg:pb-16")}>
+        {ready ? (
+          <div key={path} className="anim-page">
+            {children}
+          </div>
+        ) : (
+          <ShellSkeleton />
+        )}
+      </main>
+
+      {/* Phones & tablets: a floating dock; the current page's pill grows to show its name */}
+      {!inWorkout && (
+        <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+          <ul className="dock mx-auto max-w-md rounded-card flex items-center justify-between p-1.5">
+            {NAV.filter((n) => n.dock).map((n) => {
+              const on = isActive(path, n.href);
+              return (
+                <li key={n.href} className={cx("transition-[flex-grow] duration-300", on ? "grow-[2.2]" : "grow")}>
+                  <Link
+                    href={n.href}
+                    aria-current={on ? "page" : undefined}
+                    aria-label={n.label}
+                    className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors", on ? "bg-accent text-accent-ink px-3" : "text-muted hover:text-ink")}
+                  >
+                    <Icon name={n.icon} size={21} />
+                    {on && <span className="truncate">{n.short}</span>}
+                    {n.href === "/buddies" && <BuddyLiveDot />}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       )}
@@ -130,21 +119,32 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function Logo() {
+function NavLink({ href, active, icon, label }: { href: string; active: boolean; icon: IconName; label: string }) {
   return (
-    <span className="h-8 w-8 rounded-[10px] bg-accent text-accent-ink grid place-items-center" aria-hidden="true">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-        <path d="M4 15h4M10 11v8M14 7v12M18 11v4" />
-      </svg>
-    </span>
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cx("relative flex items-center gap-2 rounded-btn px-3.5 h-10 font-bold text-[14px] transition-colors", active ? "bg-accent text-accent-ink" : "text-muted hover:text-ink hover:bg-raised")}
+    >
+      <Icon name={icon} size={18} />
+      {label}
+      {href === "/buddies" && <BuddyLiveDot />}
+    </Link>
   );
+}
+
+/** A green dot on the Buddies link while a buddy is working out. */
+function BuddyLiveDot() {
+  const { buddies, live } = useBuddies();
+  if (!buddies.some((b) => liveOf(live, b.id).isLive)) return null;
+  return <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-pill bg-done ring-2 ring-surface anim-live" aria-label="A buddy is working out now" />;
 }
 
 function ShellSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading">
-      <div className="skeleton h-10 w-60" />
-      <div className="skeleton h-44 w-full" />
+      <div className="skeleton h-12 w-72" />
+      <div className="skeleton h-56 w-full" />
       <div className="grid md:grid-cols-3 gap-4">
         <div className="skeleton h-32" />
         <div className="skeleton h-32" />
@@ -154,8 +154,41 @@ function ShellSkeleton() {
   );
 }
 
-export function ThemeQuickSwitch({ compact }: { compact?: boolean }) {
+function useSystemDark() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    setDark(mq.matches);
+    const on = () => setDark(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return dark;
+}
+
+/** Sun / moon button: flips the current theme between its light and dark variant. */
+export function ModeToggle() {
   const { prefs, setPrefs } = useApp();
+  const systemDark = useSystemDark();
+  const shown = resolveMode(prefs.colorMode, systemDark);
+  const next = shown === "dark" ? "light" : "dark";
+  return (
+    <button
+      type="button"
+      onClick={() => setPrefs({ colorMode: next })}
+      aria-label={`Switch to ${next} mode`}
+      title={`Switch to ${next} mode`}
+      className="h-11 w-11 grid place-items-center rounded-btn hover:bg-raised shrink-0"
+    >
+      <Icon name={shown === "dark" ? "sun" : "moon"} size={21} />
+    </button>
+  );
+}
+
+export function ThemeQuickSwitch() {
+  const { prefs, setPrefs } = useApp();
+  const systemDark = useSystemDark();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -169,7 +202,8 @@ export function ThemeQuickSwitch({ compact }: { compact?: boolean }) {
       document.removeEventListener("keydown", esc);
     };
   }, [open]);
-  const current = THEMES.find((t) => t.id === prefs.theme)!;
+  const shown = resolveMode(prefs.colorMode, systemDark);
+  const current = THEMES.find((t) => t.id === prefs.theme) ?? THEMES[0];
   return (
     <div ref={ref} className="relative">
       <button
@@ -178,24 +212,12 @@ export function ThemeQuickSwitch({ compact }: { compact?: boolean }) {
         aria-expanded={open}
         aria-label={`Theme: ${current.name}. Change theme`}
         onClick={() => setOpen((o) => !o)}
-        className={cx(
-          "flex items-center gap-2.5 rounded-ctl hover:bg-raised",
-          compact ? "h-11 w-11 justify-center" : "w-full h-11 px-3 border border-line",
-        )}
+        className="h-11 w-11 grid place-items-center rounded-btn hover:bg-raised"
       >
-        <Icon name="palette" size={20} />
-        {!compact && (
-          <>
-            <span className="font-medium">{current.name}</span>
-            <Icon name="chevronUp" size={16} className="ml-auto text-muted" />
-          </>
-        )}
+        <Icon name="palette" size={21} />
       </button>
       {open && (
-        <div
-          role="menu"
-          className={cx("absolute z-50 card p-1.5 w-60 anim-pop", compact ? "right-0 top-12" : "left-0 bottom-12")}
-        >
+        <div role="menu" className="absolute z-50 card p-2 w-64 anim-pop right-0 top-13">
           {THEMES.map((t) => (
             <button
               key={t.id}
@@ -206,11 +228,11 @@ export function ThemeQuickSwitch({ compact }: { compact?: boolean }) {
                 setPrefs({ theme: t.id });
                 setOpen(false);
               }}
-              className={cx("w-full flex items-center gap-3 rounded-ctl px-2.5 py-2 text-left hover:bg-raised", prefs.theme === t.id && "bg-raised")}
+              className={cx("w-full flex items-center gap-3 rounded-ctl px-2.5 py-2.5 text-left hover:bg-raised", prefs.theme === t.id && "bg-raised")}
             >
-              <Swatch colors={t.swatch} />
+              <Swatch colors={t.swatch[shown]} />
               <span className="flex-1">
-                <span className="block font-semibold text-sm">{t.name}</span>
+                <span className="block font-bold text-sm">{t.name}</span>
                 <span className="block text-xs text-muted">{t.description}</span>
               </span>
               {prefs.theme === t.id && <Icon name="check" size={18} />}
@@ -222,7 +244,7 @@ export function ThemeQuickSwitch({ compact }: { compact?: boolean }) {
   );
 }
 
-export function Swatch({ colors, size = 28 }: { colors: [string, string, string]; size?: number }) {
+export function Swatch({ colors, size = 30 }: { colors: [string, string, string]; size?: number }) {
   return (
     <span className="relative inline-block rounded-pill overflow-hidden border border-line shrink-0" style={{ width: size, height: size, background: colors[0] }} aria-hidden="true">
       <span className="absolute right-0 bottom-0 w-1/2 h-1/2" style={{ background: colors[1] }} />
@@ -237,31 +259,27 @@ function SyncDot() {
   const offline = !sync.online;
   const label = offline ? "Offline — changes saved on this device" : sync.pending ? `Syncing ${sync.pending} change(s)` : "All changes synced";
   return (
-    <span className="h-11 w-9 grid place-items-center text-muted" title={label} aria-label={label} role="status">
-      <Icon name={offline ? "cloudOff" : "cloud"} size={20} className={cx(sync.pending > 0 && !offline && "animate-pulse")} />
+    <span className="h-11 w-8 hidden sm:grid place-items-center text-muted" title={label} aria-label={label} role="status">
+      <Icon name={offline ? "cloudOff" : "cloud"} size={19} className={cx(sync.pending > 0 && !offline && "animate-pulse")} />
     </span>
   );
 }
 
-function AccountBadge() {
-  const { mode, user, sync } = useApp();
-  if (mode === "guest")
-    return (
-      <Link href="/auth/login" className="flex items-center gap-2 rounded-ctl px-3 h-11 bg-raised hover:brightness-95 text-sm font-semibold">
-        <Icon name="user" size={18} /> Sign in to sync
-      </Link>
-    );
-  const offline = !sync.online;
+function AccountButton({ active }: { active: boolean }) {
+  const { mode, user, prefs } = useApp();
+  const initial = (prefs.displayName.trim() || user?.email || "?")[0]?.toUpperCase();
   return (
-    <Link href="/settings#account" className="flex items-center gap-2.5 rounded-ctl px-3 py-2 hover:bg-raised">
-      <span className="h-8 w-8 rounded-pill bg-accent-soft text-accent-text grid place-items-center font-bold text-sm">{user?.email?.[0]?.toUpperCase() ?? "?"}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold truncate">{user?.email}</span>
-        <span className="flex items-center gap-1 text-xs text-muted">
-          <Icon name={offline ? "cloudOff" : "cloud"} size={13} />
-          {offline ? "Offline" : sync.pending ? "Syncing…" : "Synced"}
-        </span>
-      </span>
+    <Link
+      href="/settings"
+      aria-label="Settings and account"
+      aria-current={active ? "page" : undefined}
+      className={cx("h-11 grid place-items-center rounded-btn shrink-0", mode === "user" ? "w-11" : "w-11", active ? "bg-accent text-accent-ink" : "hover:bg-raised")}
+    >
+      {mode === "user" ? (
+        <span className={cx("h-8 w-8 rounded-pill grid place-items-center font-bold text-sm", active ? "bg-accent-ink/20" : "bg-accent-soft text-accent-text")}>{initial}</span>
+      ) : (
+        <Icon name="settings" />
+      )}
     </Link>
   );
 }
@@ -270,24 +288,26 @@ function GuestBanner({ configured }: { configured: boolean }) {
   const [hidden, setHidden] = useState(false);
   if (hidden) return null;
   return (
-    <div className="mx-4 md:mx-8 mt-4 rounded-ctl border border-line bg-raised px-4 py-3 flex items-start gap-3 text-sm">
-      <Icon name="info" size={18} className="mt-0.5 shrink-0 text-muted" />
-      <p className="flex-1">
-        {configured ? (
-          <>
-            You're using Steadyset as a guest — everything is saved in this browser only.{" "}
-            <Link href="/auth/signup" className="font-semibold underline underline-offset-2">
-              Create a free account
-            </Link>{" "}
-            to back up your workouts and sync them to your other devices.
-          </>
-        ) : (
-          <>Accounts aren't configured on this deployment, so your data is saved in this browser only. See the README to connect Supabase.</>
-        )}
-      </p>
-      <button type="button" onClick={() => setHidden(true)} aria-label="Dismiss" className="h-8 w-8 -m-1 grid place-items-center rounded-ctl hover:bg-line shrink-0">
-        <Icon name="x" size={16} />
-      </button>
+    <div className="mx-auto w-full max-w-6xl px-4 md:px-8 mt-4">
+      <div className="tile px-4 py-3 flex items-start gap-3 text-sm">
+        <Icon name="info" size={18} className="mt-0.5 shrink-0 text-accent-text" />
+        <p className="flex-1">
+          {configured ? (
+            <>
+              You're using Steadyset as a guest — everything is saved in this browser only.{" "}
+              <Link href="/auth/signup" className="font-bold underline underline-offset-2">
+                Create a free account
+              </Link>{" "}
+              to sync across devices and train with buddies.
+            </>
+          ) : (
+            <>Accounts aren't configured on this deployment, so your data is saved in this browser only. See the README to connect Supabase.</>
+          )}
+        </p>
+        <button type="button" onClick={() => setHidden(true)} aria-label="Dismiss" className="h-8 w-8 -m-1 grid place-items-center rounded-btn hover:bg-line shrink-0">
+          <Icon name="x" size={16} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -300,14 +320,14 @@ function ResumeBanner() {
   if (!active || !session) return null;
   const rem = remainingMs(active.timer, now);
   return (
-    <div className="mx-4 md:mx-8 mt-4">
-      <Link href="/workout" className="flex items-center gap-3 rounded-card bg-accent text-accent-ink px-4 py-3 shadow-lg hover:brightness-105">
-        <Icon name={running ? "timer" : "play"} size={20} />
+    <div className="mx-auto w-full max-w-6xl px-4 md:px-8 mt-4">
+      <Link href="/workout" className="btn flex items-center gap-3 rounded-card bg-accent text-accent-ink px-5 py-3.5 hover:brightness-105">
+        <Icon name={running ? "timer" : "play"} size={22} />
         <span className="flex-1 min-w-0">
-          <span className="block font-semibold truncate">{session.title} in progress</span>
+          <span className="block font-bold truncate">{session.title} in progress</span>
           <span className="block text-sm opacity-85">{running ? `Resting · ${formatClock(rem / 1000)} left` : active.timer.status === "done" ? "Rest finished — time for your next set!" : "Tap to continue your workout"}</span>
         </span>
-        <span className="font-semibold text-sm">Resume</span>
+        <span className="font-bold text-sm">Resume</span>
         <Icon name="chevronRight" size={18} />
       </Link>
     </div>

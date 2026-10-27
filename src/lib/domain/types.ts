@@ -1,7 +1,9 @@
 // Core domain types shared by the UI, the local (guest) store and the Supabase store.
 // Every persisted record has a client-generated UUID so writes are idempotent (safe to retry).
 
-export type ThemeId = "blush" | "ember" | "paper" | "graphite";
+export type ThemeId = "lily" | "summit";
+/** "system" follows the device's light/dark setting. */
+export type ColorMode = "light" | "dark" | "system";
 export type Units = "kg" | "lb";
 /** 0 = Sunday … 6 = Saturday (same as Date#getDay). */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -148,6 +150,7 @@ export interface BodyMeasurement {
 
 export interface Preferences {
   theme: ThemeId;
+  colorMode: ColorMode;
   units: Units;
   defaultRestSeconds: number;
   soundEnabled: boolean;
@@ -190,7 +193,8 @@ export type TableName =
   | "measurements";
 
 export const DEFAULT_PREFERENCES: Preferences = {
-  theme: "blush",
+  theme: "lily",
+  colorMode: "system",
   units: "kg",
   defaultRestSeconds: 90,
   soundEnabled: true,
