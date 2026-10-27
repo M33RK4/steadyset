@@ -1,0 +1,304 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Every colour, font and radius in the UI goes through these variables, and
+ * each theme only redefines the variables — so all four themes cover every screen, dialog
+ * and timer automatically.
+ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-done: var(--done);
+  --color-done-soft: var(--done-soft);
+  --color-partial: var(--partial);
+  --color-partial-soft: var(--partial-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-display: var(--display-font);
+  --font-sans: var(--body-font);
+  --font-num: var(--num-font);
+  --radius-card: var(--r-card);
+  --radius-ctl: var(--r-ctl);
+  --radius-pill: 999px;
+}
+
+/* ---- Theme A · Blush: rose and plum on soft pink ---- */
+:root,
+[data-theme="blush"] {
+  color-scheme: light;
+  --bg: #fbf2f3;
+  --surface: #ffffff;
+  --raised: #fdf7f8;
+  --ink: #3b2229;
+  --muted: #8a6870;
+  --line: #f0dbe0;
+  --accent: #c8476b;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbe1e8;
+  --accent-text: #a8324f;
+  --done: #2f8f6b;
+  --done-soft: #def3ea;
+  --partial: #c07a17;
+  --partial-soft: #fbedd5;
+  --danger: #b4322e;
+  --danger-soft: #fbe3e1;
+  --display-font: var(--font-fraunces), Georgia, serif;
+  --body-font: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-fraunces), Georgia, serif;
+  --display-weight: 560;
+  --r-card: 22px;
+  --r-ctl: 14px;
+  --shadow: 0 1px 2px rgb(120 40 60 / 0.06), 0 8px 24px -12px rgb(160 50 80 / 0.18);
+  --hero: linear-gradient(135deg, #f9d7e0 0%, #fbeef1 55%, #fff 100%);
+}
+
+/* ---- Theme B · Ember: charcoal and black with orange ---- */
+[data-theme="ember"] {
+  color-scheme: dark;
+  --bg: #121212;
+  --surface: #1c1c1c;
+  --raised: #242424;
+  --ink: #f3f1ee;
+  --muted: #a39d96;
+  --line: #2f2f2f;
+  --accent: #ff7a1a;
+  --accent-ink: #160b02;
+  --accent-soft: #3a2413;
+  --accent-text: #ff9a4d;
+  --done: #4cc38a;
+  --done-soft: #17352a;
+  --partial: #f5c04a;
+  --partial-soft: #3a3019;
+  --danger: #ff6a5c;
+  --danger-soft: #3d1d1a;
+  --display-font: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --body-font: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --display-weight: 700;
+  --r-card: 10px;
+  --r-ctl: 8px;
+  --shadow: 0 0 0 1px #262626;
+  --hero: linear-gradient(120deg, #1f1f1f 0%, #1a1a1a 60%, #2a1a0e 100%);
+}
+
+/* ---- Theme C · Paper: minimal light ---- */
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --raised: #f6f6f6;
+  --ink: #161616;
+  --muted: #6b6b6b;
+  --line: #e3e3e3;
+  --accent: #161616;
+  --accent-ink: #ffffff;
+  --accent-soft: #efefef;
+  --accent-text: #161616;
+  --done: #1f7a52;
+  --done-soft: #e5f3ec;
+  --partial: #a3620a;
+  --partial-soft: #f7ecdc;
+  --danger: #b3261e;
+  --danger-soft: #f9e4e2;
+  --display-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --body-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --r-card: 12px;
+  --r-ctl: 10px;
+  --shadow: none;
+  --hero: #ffffff;
+}
+
+/* ---- Theme D · Graphite: minimal dark ---- */
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --raised: #202020;
+  --ink: #f4f4f4;
+  --muted: #9a9a9a;
+  --line: #2b2b2b;
+  --accent: #f4f4f4;
+  --accent-ink: #0f0f0f;
+  --accent-soft: #2a2a2a;
+  --accent-text: #f4f4f4;
+  --done: #5ccf95;
+  --done-soft: #16301f;
+  --partial: #e9b949;
+  --partial-soft: #332a14;
+  --danger: #ff7b72;
+  --danger-soft: #3a1a18;
+  --display-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --body-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --num-font: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --r-card: 12px;
+  --r-ctl: 10px;
+  --shadow: none;
+  --hero: #181818;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body-font);
+    font-feature-settings: "tnum" 0;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display-font);
+    font-weight: var(--display-weight);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  [data-theme="ember"] h1,
+  [data-theme="ember"] h2 {
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  [data-theme="paper"] :focus-visible,
+  [data-theme="graphite"] :focus-visible {
+    outline-color: #3b82f6;
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow);
+  }
+  .num {
+    font-family: var(--num-font);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-surface {
+    background: var(--hero);
+  }
+  .field {
+    width: 100%;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--r-ctl);
+    padding: 0.7rem 0.85rem;
+    min-height: 46px;
+  }
+  .field:focus-visible {
+    outline-offset: 0;
+  }
+  .field::placeholder {
+    color: var(--muted);
+    opacity: 0.8;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--raised) 0%, var(--line) 50%, var(--raised) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: var(--r-ctl);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+.anim-page {
+  animation: rise-in 0.28s ease-out both;
+}
+.anim-pop {
+  animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.anim-pulse {
+  animation: pulse-ring 2.4s ease-out infinite;
+}
+
+/* Reduced motion: honour the OS setting unless the user explicitly allowed motion, and always
+   when they chose "reduce" in settings. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="allow"]) *,
+  :root:not([data-motion="allow"]) *::before,
+  :root:not([data-motion="allow"]) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.brand {
+  font-family: var(--display-font);
+  font-weight: var(--display-weight);
+  letter-spacing: -0.01em;
+}
+[data-theme="ember"] .brand {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
