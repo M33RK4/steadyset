@@ -14,6 +14,7 @@ import { BUILT_IN_EXERCISES } from "../data/exercises";
 import { exercisesOfDay } from "../plans/planOps";
 import { clearTimer, IDLE_TIMER, startTimer, type TimerState } from "../timer/restTimer";
 import { uuid } from "../util/ids";
+import { parseLocalDate, toLocalDate } from "../util/dates";
 
 /** Device-local UI state of the workout in progress (persisted to localStorage). */
 export interface ActiveWorkout {
@@ -303,4 +304,109 @@ export function updateSessionNotes(data: AppData, sessionId: string, notes: stri
 
 function applyLocal(data: AppData, changes: Change[]) {
   return applyChanges(data, changes);
+}
+
+/**
+ * Remove a session and everything recorded in it — for a workout that was started by mistake or
+ * never really happened. Unlike `discardSession` this also removes logged sets.
+ */
+export function deleteSession(data: AppData, sessionId: string): Change[] {
+  if (!data.sessions.some((s) => s.id === sessionId)) return [];
+  return [
+    ...data.sets.filter((x) => x.sessionId === sessionId).map((x) => del("sets", x.id)),
+    ...data.sessionExercises.filter((e) => e.sessionId === sessionId).map((e) => del("sessionExercises", e.id)),
+    del("sessions", sessionId),
+  ];
+}
+
+/** One exercise of a workout logged after the fact. `reps` holds seconds for timed holds. */
+export interface LoggedExercise {
+  exerciseId: string;
+  sets: { reps: number | null; weight: number | null }[];
+  /** Cardio and mobility: how long it lasted instead of sets. */
+  minutes?: number | null;
+}
+
+/**
+ * A workout typed in afterwards (no plan needed): recorded as a finished session with its
+ * exercises and sets, so it counts in the calendar, history and progress like any other.
+ */
+export function logWorkout(
+  data: AppData,
+  args: { date: LocalDate; title: string; minutes: number; notes: string; items: LoggedExercise[]; units: Units; now: Date },
+): { changes: Change[]; sessionId: string } {
+  const lookup = exerciseLookup(data);
+  const sessionId = uuid();
+  // finished now when logged for today, otherwise in the evening of that day
+  const today = toLocalDate(args.now);
+  const end = args.date === today ? args.now : new Date(parseLocalDate(args.date).setHours(18));
+  const start = new Date(end.getTime() - args.minutes * 60_000);
+  const startedAt = start.toISOString();
+  const endedAt = end.toISOString();
+  const changes: Change[] = [];
+  const items = args.items.filter((it) => lookup(it.exerciseId));
+  const allTimed = items.length > 0 && items.every((it) => isTimedKind(lookup(it.exerciseId)!.kind));
+  changes.push(
+    upsert("sessions", {
+      id: sessionId,
+      planId: null,
+      planDayId: null,
+      localDate: args.date,
+      title: args.title.trim() || "Workout",
+      planName: null,
+      kind: allTimed ? "cardio" : "strength",
+      status: "completed",
+      startedAt,
+      endedAt,
+      durationSeconds: Math.round(args.minutes * 60),
+      activityType: null,
+      notes: args.notes,
+    } satisfies WorkoutSession),
+  );
+  items.forEach((it, position) => {
+    const ex = lookup(it.exerciseId)!;
+    const timed = isTimedKind(ex.kind);
+    const hold = ex.kind === "time";
+    const sets = timed ? [] : it.sets.filter((s) => s.reps !== null && s.reps > 0);
+    const reps = sets.map((s) => s.reps!);
+    const se: SessionExercise = {
+      id: uuid(),
+      sessionId,
+      exerciseId: ex.id,
+      position,
+      name: ex.name,
+      targetSets: timed ? 1 : Math.max(1, sets.length),
+      repsMin: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : reps.length ? Math.min(...reps) : 10,
+      repsMax: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : reps.length ? Math.max(...reps) : 12,
+      targetUnit: timed ? "minutes" : hold ? "seconds" : "reps",
+      perSide: false,
+      restSeconds: 0,
+      usesWeight: ex.usesWeight,
+      status: timed ? (it.minutes ? "completed" : "pending") : sets.length ? "completed" : "pending",
+      startedAt,
+      completedAt: endedAt,
+      durationSeconds: timed && it.minutes ? Math.round(it.minutes * 60) : null,
+    };
+    changes.push(upsert("sessionExercises", se));
+    sets.forEach((s, i) =>
+      changes.push(
+        upsert("sets", {
+          id: uuid(),
+          sessionExerciseId: se.id,
+          sessionId,
+          setNumber: i + 1,
+          reps: hold ? null : s.reps,
+          weight: ex.usesWeight ? s.weight : null,
+          weightUnit: ex.usesWeight && s.weight !== null ? args.units : null,
+          durationSeconds: hold ? s.reps : null,
+          completedAt: endedAt,
+        } satisfies CompletedSet),
+      ),
+    );
+  });
+  return { changes, sessionId };
+}
+
+function isTimedKind(kind: string) {
+  return kind === "cardio" || kind === "mobility";
 }

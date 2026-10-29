@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { convertDraftSchedule, cyclePosition, cycleStartFor, draftFromPlan, isCycle, moveCycleDay, newDraft, saveDraft, validateDraft, type PlanDraft } from "@/lib/plans/planOps";
-import type { DayKind, PlanDay, PlanExercise, TargetUnit, Weekday } from "@/lib/domain/types";
+import type { DayKind, Exercise, PlanDay, PlanExercise, TargetUnit, Weekday } from "@/lib/domain/types";
 import { orderedWeekdays, WEEKDAY_NAMES } from "@/lib/util/dates";
 import { uuid } from "@/lib/util/ids";
 import { REST_PRESETS } from "@/lib/timer/restTimer";
@@ -84,25 +84,7 @@ export function PlanEditor() {
     );
 
   const setPlan = (patch: Partial<PlanDraft["plan"]>) => setDraft((d) => d && { ...d, plan: { ...d.plan, ...patch } });
-  const setDay = (id: string, patch: Partial<DraftDay>) => setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
-  const setEx = (dayId: string, exId: string, patch: Partial<PlanExercise>) =>
-    setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === dayId ? { ...x, exercises: x.exercises.map((e) => (e.id === exId ? { ...e, ...patch } : e)) } : x)) });
-  const moveEx = (dayId: string, idx: number, delta: number) =>
-    setDraft(
-      (d) =>
-        d && {
-          ...d,
-          days: d.days.map((x) => {
-            if (x.id !== dayId) return x;
-            const list = [...x.exercises];
-            const j = idx + delta;
-            if (j < 0 || j >= list.length) return x;
-            [list[idx], list[j]] = [list[j], list[idx]];
-            return { ...x, exercises: list.map((e, i) => ({ ...e, position: i })) };
-          }),
-        },
-    );
-  const removeEx = (dayId: string, exId: string) => setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === dayId ? { ...x, exercises: x.exercises.filter((e) => e.id !== exId) } : x)) });
+  const { setDay, setEx, moveEx, removeEx, removeDay, addExercise } = draftOps(setDraft, prefs.defaultRestSeconds, ex.get);
   const addDay = (weekday: Weekday, preset: { name: string; kind: DayKind }) =>
     setDraft(
       (d) =>
@@ -111,13 +93,6 @@ export function PlanEditor() {
           days: [...d.days, { id: uuid(), planId: d.plan.id, weekday, name: preset.name, kind: preset.kind, notes: "", optional: preset.kind === "activity", exercises: [] }],
         },
     );
-  const removeDay = (id: string) =>
-    setDraft((d) => {
-      if (!d) return d;
-      const days = d.days.filter((x) => x.id !== id);
-      // cycle positions stay 0, 1, 2 … without gaps
-      return { ...d, days: isCycle(d.plan) ? [...days].sort((a, b) => a.weekday - b.weekday).map((x, i) => ({ ...x, weekday: i as Weekday })) : days };
-    });
   const addCycleDay = (preset: { name: string; kind: DayKind }) =>
     setDraft((d) =>
       d && d.days.length < 7
@@ -130,41 +105,6 @@ export function PlanEditor() {
           }
         : d,
     );
-
-  const addExercise = (dayId: string, exerciseId: string) => {
-    const e = ex.get(exerciseId);
-    const timed = e?.kind === "cardio" || e?.kind === "mobility";
-    const hold = e?.kind === "time";
-    setDraft(
-      (d) =>
-        d && {
-          ...d,
-          days: d.days.map((x) =>
-            x.id === dayId
-              ? {
-                  ...x,
-                  exercises: [
-                    ...x.exercises,
-                    {
-                      id: uuid(),
-                      planDayId: dayId,
-                      exerciseId,
-                      position: x.exercises.length,
-                      sets: timed ? 1 : 3,
-                      repsMin: timed ? 15 : hold ? 20 : 10,
-                      repsMax: timed ? 25 : hold ? 30 : 12,
-                      targetUnit: (timed ? "minutes" : hold ? "seconds" : "reps") as TargetUnit,
-                      perSide: false,
-                      restSeconds: timed ? 0 : prefs.defaultRestSeconds,
-                      notes: "",
-                    },
-                  ],
-                }
-              : x,
-          ),
-        },
-    );
-  };
 
   const save = () => {
     const errs = validateDraft(draft);
@@ -345,6 +285,145 @@ function EmptyDay({ label, onAdd }: { label: string; onAdd: (p: { name: string; 
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+type SetDraft = Dispatch<SetStateAction<PlanDraft | null>>;
+
+/** Edits to the days of a draft plan, shared by the full plan editor and the inline day editor. */
+function draftOps(setDraft: SetDraft, defaultRest: number, getExercise: (id: string) => Exercise | undefined) {
+  const setDay = (id: string, patch: Partial<DraftDay>) => setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
+  const setEx = (dayId: string, exId: string, patch: Partial<PlanExercise>) =>
+    setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === dayId ? { ...x, exercises: x.exercises.map((e) => (e.id === exId ? { ...e, ...patch } : e)) } : x)) });
+  const moveEx = (dayId: string, idx: number, delta: number) =>
+    setDraft(
+      (d) =>
+        d && {
+          ...d,
+          days: d.days.map((x) => {
+            if (x.id !== dayId) return x;
+            const list = [...x.exercises];
+            const j = idx + delta;
+            if (j < 0 || j >= list.length) return x;
+            [list[idx], list[j]] = [list[j], list[idx]];
+            return { ...x, exercises: list.map((e, i) => ({ ...e, position: i })) };
+          }),
+        },
+    );
+  const removeEx = (dayId: string, exId: string) => setDraft((d) => d && { ...d, days: d.days.map((x) => (x.id === dayId ? { ...x, exercises: x.exercises.filter((e) => e.id !== exId) } : x)) });
+  const removeDay = (id: string) =>
+    setDraft((d) => {
+      if (!d) return d;
+      const days = d.days.filter((x) => x.id !== id);
+      // cycle positions stay 0, 1, 2 … without gaps
+      return { ...d, days: isCycle(d.plan) ? [...days].sort((a, b) => a.weekday - b.weekday).map((x, i) => ({ ...x, weekday: i as Weekday })) : days };
+    });
+  const addExercise = (dayId: string, exerciseId: string) => {
+    const e = getExercise(exerciseId);
+    const timed = e?.kind === "cardio" || e?.kind === "mobility";
+    const hold = e?.kind === "time";
+    setDraft(
+      (d) =>
+        d && {
+          ...d,
+          days: d.days.map((x) =>
+            x.id === dayId
+              ? {
+                  ...x,
+                  exercises: [
+                    ...x.exercises,
+                    {
+                      id: uuid(),
+                      planDayId: dayId,
+                      exerciseId,
+                      position: x.exercises.length,
+                      sets: timed ? 1 : 3,
+                      repsMin: timed ? 15 : hold ? 20 : 10,
+                      repsMax: timed ? 25 : hold ? 30 : 12,
+                      targetUnit: (timed ? "minutes" : hold ? "seconds" : "reps") as TargetUnit,
+                      perSide: false,
+                      restSeconds: timed ? 0 : defaultRest,
+                      notes: "",
+                    },
+                  ],
+                }
+              : x,
+          ),
+        },
+    );
+  };
+
+  return { setDay, setEx, moveEx, removeEx, removeDay, addExercise };
+}
+
+/**
+ * Edit one day of a plan in place (from the plan card on My workouts), saved straight to the
+ * plan. Uses the same day editor as the full plan editor.
+ */
+export function InlineDayEditor({ planId, dayId, label, onDone }: { planId: string; dayId: string; label: string; onDone: () => void }) {
+  const { data, commit, prefs } = useApp();
+  const ex = useExercises();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [draft, setDraft] = useState<PlanDraft | null>(() => draftFromPlan(data, planId));
+  const [errors, setErrors] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
+  const { setDay, setEx, moveEx, removeEx, addExercise } = draftOps(setDraft, prefs.defaultRestSeconds, ex.get);
+  const day = draft?.days.find((d) => d.id === dayId);
+  if (!draft || !day) return null;
+
+  const save = (next: PlanDraft, message: string) => {
+    const errs = validateDraft(next);
+    setErrors(errs);
+    if (errs.length) return;
+    commit((d) => saveDraft(d, next));
+    toast(message, { tone: "success" });
+    onDone();
+  };
+  const remove = async () => {
+    const ok = await confirm({ title: `Remove ${day.name}?`, body: "The day is taken out of this plan. Workouts you already logged stay in your history.", confirmLabel: "Remove day", danger: true });
+    if (!ok) return;
+    const days = draft.days.filter((x) => x.id !== dayId);
+    save({ ...draft, days: isCycle(draft.plan) ? [...days].sort((a, b) => a.weekday - b.weekday).map((x, i) => ({ ...x, weekday: i as Weekday })) : days }, `${day.name} removed`);
+  };
+
+  return (
+    <div className="space-y-3 anim-pop">
+      {errors.length > 0 && (
+        <div role="alert" className="rounded-ctl bg-danger-soft text-danger p-3 text-sm">
+          {errors.map((e) => (
+            <p key={e}>{e}</p>
+          ))}
+        </div>
+      )}
+      <DayEditor
+        day={day}
+        label={label}
+        freeWeekdays={[]}
+        onChange={(patch) => setDay(day.id, patch)}
+        onRemove={remove}
+        onAddExercise={() => setPicking(true)}
+        onExChange={(exId, patch) => setEx(day.id, exId, patch)}
+        onExMove={(idx, delta) => moveEx(day.id, idx, delta)}
+        onExRemove={(exId) => removeEx(day.id, exId)}
+      />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button icon="check" onClick={() => save(draft, "Workout saved")}>
+          Save changes
+        </Button>
+      </div>
+      <ExercisePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        onPick={(id) => {
+          addExercise(day.id, id);
+          setPicking(false);
+        }}
+      />
     </div>
   );
 }

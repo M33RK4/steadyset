@@ -4,14 +4,15 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { addWorkoutOn, buildDay, moveDay, restoreDay, skipDay, type CalendarDay } from "@/lib/calendar/calendar";
 import { activePlan, daysOfPlan, exercisesOfDay, formatTarget } from "@/lib/plans/planOps";
-import { isTimed, sessionExercisesOf, setsOf, updateSessionNotes } from "@/lib/session/sessionOps";
+import { deleteSession, isTimed, sessionExercisesOf, setsOf, updateSessionNotes } from "@/lib/session/sessionOps";
 import { addDays, addMonths, formatDuration, formatLongDate, formatMonthYear, monthGrid, orderedWeekdays, sameMonth, startOfWeek, WEEKDAY_SHORT, weekDates, weekdayOf } from "@/lib/util/dates";
 import { Badge, Button, IconButton, PageHeader, Segmented, cx } from "@/components/ui/primitives";
-import { Dialog, useToast } from "@/components/ui/Dialog";
+import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { StatusDot, STATUS_LABEL, StatusLegend } from "./StatusDot";
 import { useCalendarContext, useExercises, useToday, DAY_KIND_LABEL } from "../common";
 import { LogActivityDialog, useStartWorkout } from "../workout/useStartWorkout";
+import { LogWorkoutDialog } from "../workout/LogWorkoutDialog";
 
 type View = "month" | "week" | "agenda";
 
@@ -197,11 +198,13 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
   const day = buildDay(ctx, date);
   const [moveTo, setMoveTo] = useState(addDays(date, 1));
   const [logOpen, setLogOpen] = useState(false);
+  const [logWorkoutOpen, setLogWorkoutOpen] = useState(false);
   const plan = activePlan(data);
   const planDays = plan ? daysOfPlan(data, plan.id).filter((d) => d.kind !== "rest") : [];
   const planned = day.planned;
   const items = planned ? exercisesOfDay(data, planned.id) : [];
   const canReschedule = !!planned && planned.kind !== "rest" && date >= today && day.sessions.length === 0;
+  const canSkip = !!planned && planned.kind !== "rest" && day.sessions.length === 0;
 
   return (
     <>
@@ -258,11 +261,16 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
                 </Button>
               )}
               {date <= today && (
-                <Button variant="secondary" icon="walk" onClick={() => setLogOpen(true)}>
-                  Log activity
-                </Button>
+                <>
+                  <Button variant="secondary" icon="dumbbell" onClick={() => setLogWorkoutOpen(true)}>
+                    Log workout
+                  </Button>
+                  <Button variant="secondary" icon="walk" onClick={() => setLogOpen(true)}>
+                    Log activity
+                  </Button>
+                </>
               )}
-              {canReschedule && (
+              {canSkip && (
                 <Button
                   variant="ghost"
                   icon="skip"
@@ -271,7 +279,7 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
                     toast(`${planned!.name} skipped`, { action: { label: "Undo", onClick: () => commit((d) => restoreDay({ ...ctx, data: d }, date)) } });
                   }}
                 >
-                  Skip this day
+                  {date < today ? "I didn't do this — mark as skipped" : "Skip this day"}
                 </Button>
               )}
               {day.overrides.length > 0 && (
@@ -321,17 +329,20 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
                 </select>
               </label>
             )}
-            <p className="text-xs text-muted">Rescheduling only changes your plan for these dates. Logged workouts are never changed or deleted.</p>
+            <p className="text-xs text-muted">Rescheduling only changes your plan for these dates. Logged workouts stay unless you delete them.</p>
           </section>
         </div>
       </Dialog>
+      <LogWorkoutDialog open={logWorkoutOpen} onClose={() => setLogWorkoutOpen(false)} date={date} />
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={date} day={planned && planned.kind !== "rest" ? planned : null} kind={planned?.kind === "cardio" ? "cardio" : "activity"} />
     </>
   );
 }
 
 function SessionDetail({ sessionId }: { sessionId: string }) {
-  const { data, commit } = useApp();
+  const { data, commit, active, setActive } = useApp();
+  const confirm = useConfirm();
+  const toast = useToast();
   const s = data.sessions.find((x) => x.id === sessionId)!;
   const list = sessionExercisesOf(data, s.id);
   const [notes, setNotes] = useState(s.notes);
@@ -389,6 +400,26 @@ function SessionDetail({ sessionId }: { sessionId: string }) {
           <p className={cx("text-sm flex-1", !s.notes && "text-muted")}>{s.notes || "No notes."}</p>
           <Button size="sm" variant="ghost" icon="note" onClick={() => setEditing(true)}>
             {s.notes ? "Edit notes" : "Add notes"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="trash"
+            className="text-danger"
+            onClick={async () => {
+              const ok = await confirm({
+                title: `Delete “${s.title}”?`,
+                body: "It's removed from your calendar, history and progress, along with every set recorded in it. This can't be undone.",
+                confirmLabel: "Delete workout",
+                danger: true,
+              });
+              if (!ok) return;
+              commit((d) => deleteSession(d, s.id));
+              if (active?.sessionId === s.id) setActive(null);
+              toast("Workout deleted");
+            }}
+          >
+            Delete
           </Button>
         </div>
       )}

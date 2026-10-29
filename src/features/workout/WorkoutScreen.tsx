@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store/AppStore";
 import {
   addExerciseToSession,
   completeTimedItem,
+  deleteSession,
   discardSession,
   finishSession,
   inProgressSession,
@@ -221,9 +222,13 @@ function ActiveWorkout() {
           router.push("/");
         }}
         onDiscard={async () => {
-          const ok = await confirm({ title: "Discard this workout?", body: "Nothing was recorded, so the session will be removed.", confirmLabel: "Discard", danger: true });
+          const ok = await confirm(
+            prog.anyWork
+              ? { title: "Delete this workout?", body: `The ${prog.sets} set${prog.sets === 1 ? "" : "s"} you recorded are removed too, and nothing is saved to your history. This can't be undone.`, confirmLabel: "Delete workout", danger: true }
+              : { title: "Discard this workout?", body: "Nothing was recorded, so the session will be removed.", confirmLabel: "Discard", danger: true },
+          );
           if (!ok) return;
-          commit((d) => discardSession(d, session.id));
+          commit((d) => (sessionProgress(d, session.id).anyWork ? deleteSession(d, session.id) : discardSession(d, session.id)));
           setActive(null);
           router.push("/");
         }}
@@ -692,11 +697,9 @@ function SummaryDialog({ open, onClose, onSave, onDiscard }: { open: boolean; on
       description={prog.allDone ? "Every exercise is done. Save it to your history and calendar." : "Not every exercise is done. It will be saved as partially completed."}
       footer={
         <>
-          {!prog.anyWork ? (
-            <Button variant="ghost" icon="trash" onClick={onDiscard} className="mr-auto text-danger">
-              Discard
-            </Button>
-          ) : null}
+          <Button variant="ghost" icon="trash" onClick={onDiscard} className="mr-auto text-danger">
+            {prog.anyWork ? "Delete" : "Discard"}
+          </Button>
           <Button variant="secondary" onClick={onClose}>
             {prog.allDone ? "Back" : "Keep training"}
           </Button>

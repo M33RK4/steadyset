@@ -302,3 +302,67 @@ export function moveCycleDay(draft: PlanDraft, dayId: string, delta: number): Pl
   [days[i], days[j]] = [days[j], days[i]];
   return { ...draft, days: days.map((d, pos) => ({ ...d, weekday: pos as Weekday })) };
 }
+
+/**
+ * Where a workout done on `date` would go in the active plan: weekly plans use that weekday,
+ * cycles the day of the cycle that falls on it. Without a plan a new weekly one is created.
+ */
+export function planSlotFor(data: AppData, date: LocalDate): { plan: Plan | undefined; position: Weekday; existing: PlanDay | undefined } {
+  const plan = activePlan(data);
+  if (plan && isCycle(plan)) {
+    const days = daysOfPlan(data, plan.id);
+    const position = (days.length && plan.cycleStart ? cyclePosition(plan.cycleStart, date, days.length) : 0) as Weekday;
+    return { plan, position, existing: days.find((d) => d.weekday === position) };
+  }
+  const position = weekdayOf(date);
+  return { plan, position, existing: plan ? dayForWeekday(data, plan.id, position) : undefined };
+}
+
+/**
+ * Make a logged workout the plan's workout for that day (see `planSlotFor`), using what was
+ * actually done as the targets. An existing day in that slot is replaced; the session is then
+ * linked to the day so the calendar shows it as done.
+ */
+export function saveSessionAsPlanDay(data: AppData, sessionId: string, opts: { restSeconds: number; now?: Date }): { changes: Change[]; planId: string } {
+  const now = opts.now ?? new Date();
+  const session = data.sessions.find((s) => s.id === sessionId);
+  if (!session) return { changes: [], planId: "" };
+  const { plan, position, existing } = planSlotFor(data, session.localDate);
+  const fresh = newDraft(now);
+  const draft: PlanDraft = plan ? draftFromPlan(data, plan.id)! : { ...fresh, plan: { ...fresh.plan, name: "My plan", isActive: true } };
+  const dayId = existing?.id ?? uuid();
+  const ses = data.sessionExercises.filter((e) => e.sessionId === sessionId && e.exerciseId).sort((a, b) => a.position - b.position);
+  const exercises: PlanExercise[] = ses.map((e, i) => {
+    const sets = data.sets.filter((s) => s.sessionExerciseId === e.id);
+    const timed = e.targetUnit === "minutes";
+    const values = sets.map((s) => (e.targetUnit === "seconds" ? s.durationSeconds : s.reps)).filter((v): v is number => v !== null && v > 0);
+    const minutes = e.durationSeconds ? Math.max(1, Math.round(e.durationSeconds / 60)) : e.repsMin;
+    return {
+      id: uuid(),
+      planDayId: dayId,
+      exerciseId: e.exerciseId!,
+      position: i,
+      sets: timed ? 1 : Math.max(1, sets.length || e.targetSets),
+      repsMin: timed ? minutes : values.length ? Math.min(...values) : e.repsMin,
+      repsMax: timed ? minutes : values.length ? Math.max(...values) : e.repsMax,
+      targetUnit: e.targetUnit,
+      perSide: e.perSide,
+      restSeconds: timed ? 0 : opts.restSeconds,
+      notes: "",
+    };
+  });
+  const day: PlanDraft["days"][number] = {
+    id: dayId,
+    planId: draft.plan.id,
+    weekday: position,
+    name: session.title,
+    kind: session.kind === "cardio" ? "cardio" : "strength",
+    notes: existing?.notes ?? "",
+    optional: false,
+    exercises,
+  };
+  draft.days = [...draft.days.filter((d) => d.weekday !== position), day];
+  const changes = saveDraft(data, draft, now);
+  changes.push(upsert("sessions", { ...session, planId: draft.plan.id, planDayId: dayId, planName: draft.plan.name }));
+  return { changes, planId: draft.plan.id };
+}

@@ -27,7 +27,9 @@ import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { DAY_KIND_LABEL, useExercises, useToday } from "../common";
 import { ExerciseName } from "../library/ExerciseSheet";
+import { InlineDayEditor } from "./PlanEditor";
 import { LogActivityDialog, useStartWorkout } from "../workout/useStartWorkout";
+import { LogWorkoutDialog } from "../workout/LogWorkoutDialog";
 
 export function WorkoutsScreen() {
   const { data, commit } = useApp();
@@ -35,6 +37,7 @@ export function WorkoutsScreen() {
   const toast = useToast();
   const today = useToday();
   const [logOpen, setLogOpen] = useState(false);
+  const [logWorkoutOpen, setLogWorkoutOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [starting, setStarting] = useState<PlanTemplate | null>(null);
   const live = data.plans.filter((p) => !p.archivedAt).sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.createdAt.localeCompare(b.createdAt));
@@ -47,6 +50,9 @@ export function WorkoutsScreen() {
         subtitle="Your plans and weekly schedule. The active plan drives your dashboard and calendar."
         actions={
           <>
+            <Button variant="secondary" icon="dumbbell" onClick={() => setLogWorkoutOpen(true)}>
+              Log workout
+            </Button>
             <Button variant="secondary" icon="walk" onClick={() => setLogOpen(true)}>
               Log activity
             </Button>
@@ -122,6 +128,7 @@ export function WorkoutsScreen() {
       )}
 
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={today} day={null} />
+      <LogWorkoutDialog open={logWorkoutOpen} onClose={() => setLogWorkoutOpen(false)} date={today} />
       {starting && <StartCycleDialog template={starting} onClose={() => setStarting(null)} />}
     </div>
   );
@@ -387,7 +394,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       )}
 
       {opened && (
-        <DayDetail day={opened} label={dayLabel(plan, opened, WEEKDAY_NAMES)} canStart={!plan.archivedAt} onStart={() => start(opened, today)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
+        <DayDetail key={opened.id} day={opened} label={dayLabel(plan, opened, WEEKDAY_NAMES)} canStart={!plan.archivedAt} onStart={() => start(opened, today)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
       )}
     </article>
   );
@@ -396,7 +403,9 @@ function PlanCard({ plan }: { plan: Plan }) {
 function DayDetail({ day, label, canStart, onStart, exName }: { day: PlanDay; label: string; canStart: boolean; onStart: () => void; exName: (id: string) => string }) {
   const { data } = useApp();
   const ex = useExercises();
+  const [editing, setEditing] = useState(false);
   const items = exercisesOfDay(data, day.id);
+  if (editing) return <InlineDayEditor planId={day.planId} dayId={day.id} label={label} onDone={() => setEditing(false)} />;
   return (
     <div className="rounded-card bg-raised border border-line p-4 space-y-3 anim-pop">
       <div className="flex flex-wrap items-center gap-2">
@@ -421,11 +430,16 @@ function DayDetail({ day, label, canStart, onStart, exName }: { day: PlanDay; la
           ))}
         </ol>
       )}
-      {canStart && (day.kind === "strength" || day.kind === "cardio") && (
-        <Button icon="play" onClick={onStart}>
-          Start this workout
+      <div className="flex flex-wrap gap-2">
+        {canStart && (day.kind === "strength" || day.kind === "cardio") && (
+          <Button icon="play" onClick={onStart}>
+            Start this workout
+          </Button>
+        )}
+        <Button variant="secondary" icon="edit" onClick={() => setEditing(true)}>
+          Edit this workout
         </Button>
-      )}
+      </div>
     </div>
   );
 }

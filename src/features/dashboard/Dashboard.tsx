@@ -5,12 +5,14 @@ import { useMemo, useState } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { buildDay, currentStreak, nextRestDay, upcomingWorkouts, weekSummary, type CalendarDay } from "@/lib/calendar/calendar";
 import { estimateMinutes, exercisesOfDay, formatTarget } from "@/lib/plans/planOps";
-import { inProgressSession, sessionProgress } from "@/lib/session/sessionOps";
+import { deleteSession, inProgressSession, sessionProgress } from "@/lib/session/sessionOps";
 import { formatDuration, formatLongDate, WEEKDAY_SHORT, weekdayOf } from "@/lib/util/dates";
-import { Badge, Button, EmptyState, ProgressRing, cx } from "@/components/ui/primitives";
+import { Badge, Button, EmptyState, IconButton, ProgressRing, cx } from "@/components/ui/primitives";
+import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { greeting, useCalendarContext, useExercises, useToday } from "../common";
 import { LogActivityDialog, useStartWorkout } from "../workout/useStartWorkout";
+import { LogWorkoutDialog } from "../workout/LogWorkoutDialog";
 import { StatusDot } from "../calendar/StatusDot";
 import { HeroArt } from "@/components/ui/ThemeArt";
 import { BuddyStrip } from "../buddies/BuddyLive";
@@ -18,8 +20,25 @@ import { useBuddies } from "../buddies/BuddiesProvider";
 import { ExerciseName } from "../library/ExerciseSheet";
 
 export function Dashboard() {
-  const { data, prefs } = useApp();
+  const { data, prefs, commit, active, setActive } = useApp();
   const today = useToday();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [logWorkoutOpen, setLogWorkoutOpen] = useState(false);
+  const removeSession = async (id: string) => {
+    const s = data.sessions.find((x) => x.id === id);
+    if (!s) return;
+    const ok = await confirm({
+      title: `Delete “${s.title}”?`,
+      body: "It's removed from your calendar, history and progress, along with every set recorded in it. This can't be undone.",
+      confirmLabel: "Delete workout",
+      danger: true,
+    });
+    if (!ok) return;
+    commit((d) => deleteSession(d, id));
+    if (active?.sessionId === id) setActive(null);
+    toast("Workout deleted");
+  };
   const ctx = useCalendarContext();
   const ex = useExercises();
   const start = useStartWorkout();
@@ -48,7 +67,7 @@ export function Dashboard() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-        <TodayCard day={todayDay} running={running?.id ?? null} onStart={() => start(todayDay.planned, today)} onLog={() => setLogOpen(true)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
+        <TodayCard day={todayDay} running={running?.id ?? null} onStart={() => start(todayDay.planned, today)} onLog={() => setLogOpen(true)} onLogWorkout={() => setLogWorkoutOpen(true)} onDelete={removeSession} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
 
         <section className="card p-6 space-y-5" aria-labelledby="week-h">
           <div className="flex items-center justify-between">
@@ -144,13 +163,22 @@ export function Dashboard() {
                       </p>
                     </div>
                     <Badge tone={s.status === "completed" ? "done" : "partial"}>{s.status === "completed" ? "Completed" : "Partial"}</Badge>
+                    <IconButton icon="trash" label={`Delete ${s.title}`} size={36} className="text-muted" onClick={() => void removeSession(s.id)} />
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <EmptyState icon="dumbbell" title="No workouts yet">
-              Finish your first session and it'll show up here.
+            <EmptyState
+              icon="dumbbell"
+              title="No workouts yet"
+              action={
+                <Button variant="secondary" icon="plus" onClick={() => setLogWorkoutOpen(true)}>
+                  Log a workout
+                </Button>
+              }
+            >
+              Finish your first session, or log one you already did, and it'll show up here.
             </EmptyState>
           )}
         </section>
@@ -158,12 +186,29 @@ export function Dashboard() {
 
       <BuddiesRow />
 
+      <LogWorkoutDialog open={logWorkoutOpen} onClose={() => setLogWorkoutOpen(false)} date={today} />
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={today} day={todayDay.planned} kind={todayDay.planned?.kind === "cardio" ? "cardio" : "activity"} />
     </div>
   );
 }
 
-function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay; running: string | null; onStart: () => void; onLog: () => void; exName: (id: string) => string }) {
+function TodayCard({
+  day,
+  running,
+  onStart,
+  onLog,
+  onLogWorkout,
+  onDelete,
+  exName,
+}: {
+  day: CalendarDay;
+  running: string | null;
+  onStart: () => void;
+  onLog: () => void;
+  onLogWorkout: () => void;
+  onDelete: (sessionId: string) => void;
+  exName: (id: string) => string;
+}) {
   const { data } = useApp();
   const planned = day.planned;
   const doneSession = day.sessions.find((s) => s.status === "completed") ?? day.sessions.find((s) => s.status === "partial");
@@ -190,6 +235,9 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
         >
           <Icon name="play" size={24} /> Resume workout
         </Link>
+        <Button variant="ghost" icon="trash" className="relative self-start text-danger" onClick={() => onDelete(s.id)}>
+          {s.localDate < day.date ? "Didn't do it? Delete this workout" : "Delete this workout"}
+        </Button>
       </section>
     );
   }
@@ -208,6 +256,9 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
           {planned ? "Recovery is when your muscles adapt. A gentle walk or some stretching is plenty." : day.skippedDay ? "You moved or skipped today's workout." : "Enjoy the day, or start a workout anyway."}
         </p>
         <div className="relative flex flex-wrap gap-2 mt-2">
+          <Button variant="secondary" icon="dumbbell" onClick={onLogWorkout}>
+            Log a workout
+          </Button>
           <Button variant="secondary" icon="walk" onClick={onLog}>
             Log an activity
           </Button>
