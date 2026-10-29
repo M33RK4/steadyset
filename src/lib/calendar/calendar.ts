@@ -1,7 +1,7 @@
 import type { AppData, LocalDate, Plan, PlanDay, ScheduleOverride, WorkoutSession } from "../domain/types";
 import { del, upsert, type Change } from "../domain/changes";
-import { activePlan } from "../plans/planOps";
-import { addDays, diffDays, toLocalDate, weekDates, weekdayOf } from "../util/dates";
+import { activePlan, planDayOn } from "../plans/planOps";
+import { addDays, diffDays, toLocalDate, weekDates } from "../util/dates";
 import { uuid } from "../util/ids";
 
 export type DayStatus =
@@ -40,7 +40,9 @@ export function makeContext(data: AppData, today: LocalDate): CalendarContext {
 }
 
 function planStart(plan: Plan): LocalDate {
-  return toLocalDate(new Date(plan.createdAt));
+  const created = toLocalDate(new Date(plan.createdAt));
+  // a cycle can be started "in the past" (today is Day 3), but never shows before the plan existed
+  return plan.cycleStart && plan.cycleStart > created ? plan.cycleStart : created;
 }
 
 /** The plan day scheduled on a date, after applying skip/move/add overrides. */
@@ -51,7 +53,7 @@ export function scheduledFor(ctx: CalendarContext, date: LocalDate) {
   let source: CalendarDay["plannedSource"] = null;
   let skippedDay: PlanDay | null = null;
   if (plan && date >= planStart(plan)) {
-    planned = data.planDays.find((d) => d.planId === plan.id && d.weekday === weekdayOf(date)) ?? null;
+    planned = planDayOn(data, plan, date);
     if (planned) source = "plan";
   }
   if (planned && overrides.some((o) => o.kind === "skip" && (o.planDayId === planned!.id || o.planDayId === null))) {
@@ -158,7 +160,7 @@ export function skipDay(ctx: CalendarContext, date: LocalDate, now = new Date())
   // Undo an "add" on that date first, otherwise add a skip.
   const adds = ctx.data.overrides.filter((o) => o.date === date && o.kind === "add");
   if (adds.length) changes.push(...adds.map((o) => del("overrides", o.id)));
-  const basePlan = ctx.plan && ctx.data.planDays.find((d) => d.planId === ctx.plan!.id && d.weekday === weekdayOf(date));
+  const basePlan = ctx.plan && planDayOn(ctx.data, ctx.plan, date);
   if (basePlan && (!adds.length || planned?.id === basePlan.id)) {
     changes.push(upsert("overrides", { id: uuid(), date, kind: "skip", planDayId: basePlan.id, movedFrom: null, note: "", createdAt: now.toISOString() } satisfies ScheduleOverride));
   }

@@ -1,11 +1,44 @@
-import type { AppData, Plan, PlanDay, PlanExercise, Weekday } from "../domain/types";
+import type { AppData, LocalDate, Plan, PlanDay, PlanExercise, Weekday } from "../domain/types";
 import { del, upsert, type Change } from "../domain/changes";
 import type { PlanTemplate } from "../data/defaultPlan";
 import { exerciseIdBySlug } from "../data/exercises";
 import { uuid } from "../util/ids";
+import { addDays, diffDays, toLocalDate, weekdayOf } from "../util/dates";
 
+/** Cycle plans repeat their days in order; weekly plans tie each day to a weekday. */
+export function isCycle(plan: Pick<Plan, "schedule"> | undefined | null): boolean {
+  return plan?.schedule === "cycle";
+}
+
+/** A plan's days in order: Monday first for weekly plans, Day 1 first for cycles. */
 export function daysOfPlan(data: AppData, planId: string): PlanDay[] {
-  return data.planDays.filter((d) => d.planId === planId).sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7));
+  const cycle = isCycle(data.plans.find((p) => p.id === planId));
+  const key = (d: PlanDay) => (cycle ? d.weekday : (d.weekday + 6) % 7);
+  return data.planDays.filter((d) => d.planId === planId).sort((a, b) => key(a) - key(b));
+}
+
+/** Which position of an n-day cycle falls on a date (0 = Day 1). Works before the start too. */
+export function cyclePosition(cycleStart: LocalDate, date: LocalDate, length: number): number {
+  return ((diffDays(cycleStart, date) % length) + length) % length;
+}
+
+/** The start date that makes `date` fall on cycle position `position`. */
+export function cycleStartFor(date: LocalDate, position: number): LocalDate {
+  return addDays(date, -position);
+}
+
+/** The plan day a date falls on by the plan's own schedule (before any skip / move). */
+export function planDayOn(data: AppData, plan: Plan, date: LocalDate): PlanDay | null {
+  const days = daysOfPlan(data, plan.id);
+  if (!isCycle(plan)) return days.find((d) => d.weekday === weekdayOf(date)) ?? null;
+  if (!days.length) return null;
+  const start = plan.cycleStart ?? toLocalDate(new Date(plan.createdAt));
+  return days[cyclePosition(start, date, days.length)];
+}
+
+/** "Day 2" for cycles, "Tuesday" for weekly plans. */
+export function dayLabel(plan: Pick<Plan, "schedule"> | undefined, day: Pick<PlanDay, "weekday">, weekdayNames: readonly string[]): string {
+  return isCycle(plan) ? `Day ${day.weekday + 1}` : weekdayNames[day.weekday];
 }
 
 export function exercisesOfDay(data: AppData, dayId: string): PlanExercise[] {
@@ -53,16 +86,27 @@ function templateContent(template: PlanTemplate, planId: string): { days: PlanDa
   return { days, exercises };
 }
 
-/** Copy a template into the user's own plans. */
+/**
+ * Copy a template into the user's own plans. Cycle templates can be reordered with `order`
+ * (template day indexes in the order wanted) and started on any day with `todayPosition`.
+ */
 export function instantiateTemplate(
   data: AppData,
   template: PlanTemplate,
-  opts: { makeActive: boolean; name?: string; now?: Date },
+  opts: { makeActive: boolean; name?: string; now?: Date; order?: number[]; todayPosition?: number },
 ): { changes: Change[]; planId: string } {
-  const now = (opts.now ?? new Date()).toISOString();
+  const nowDate = opts.now ?? new Date();
+  const now = nowDate.toISOString();
+  const cycle = template.schedule === "cycle";
+  if (cycle && opts.order) {
+    const order = opts.order;
+    template = { ...template, days: order.map((i, pos) => ({ ...template.days[i], weekday: pos as Weekday })) };
+  }
   const plan: Plan = {
     id: uuid(),
     name: opts.name ?? template.name,
+    schedule: cycle ? "cycle" : "weekly",
+    cycleStart: cycle ? cycleStartFor(toLocalDate(nowDate), opts.todayPosition ?? 0) : null,
     description: template.description,
     isActive: opts.makeActive,
     archivedAt: null,
@@ -165,7 +209,7 @@ export function newDraft(now = new Date()): PlanDraft {
   const iso = now.toISOString();
   const planId = uuid();
   return {
-    plan: { id: planId, name: "", description: "", isActive: false, archivedAt: null, templateKey: null, createdAt: iso, updatedAt: iso },
+    plan: { id: planId, name: "", schedule: "weekly", cycleStart: null, description: "", isActive: false, archivedAt: null, templateKey: null, createdAt: iso, updatedAt: iso },
     days: [],
   };
 }
@@ -174,8 +218,11 @@ export function validateDraft(d: PlanDraft): string[] {
   const errors: string[] = [];
   if (!d.plan.name.trim()) errors.push("Give your plan a name.");
   const seen = new Set<number>();
+  const cycle = isCycle(d.plan);
+  if (cycle && d.days.length < 2) errors.push("A repeating cycle needs at least 2 days.");
+  if (cycle && d.days.length > 7) errors.push("A repeating cycle can have at most 7 days.");
   for (const day of d.days) {
-    if (seen.has(day.weekday)) errors.push("Each weekday can only have one workout.");
+    if (seen.has(day.weekday)) errors.push(cycle ? "Two days share the same place in the cycle." : "Each weekday can only have one workout.");
     seen.add(day.weekday);
     if (!day.name.trim()) errors.push("Every workout day needs a name.");
     for (const e of day.exercises) {
@@ -233,4 +280,25 @@ export function formatTarget(e: { sets: number; repsMin: number; repsMax: number
   if (e.targetUnit === "minutes") return `${range} min`;
   const unit = e.targetUnit === "seconds" ? " s" : " reps";
   return `${e.sets} × ${range}${unit}${e.perSide ? " / side" : ""}`;
+}
+
+/** Switch a draft between a weekly plan and a repeating cycle, keeping the days in order. */
+export function convertDraftSchedule(draft: PlanDraft, to: "weekly" | "cycle", today: LocalDate): PlanDraft {
+  if ((draft.plan.schedule ?? "weekly") === to) return draft;
+  const ordered = [...draft.days].sort((a, b) => (to === "cycle" ? (a.weekday + 6) % 7 - (b.weekday + 6) % 7 : a.weekday - b.weekday)).slice(0, 7);
+  return {
+    plan: { ...draft.plan, schedule: to, cycleStart: to === "cycle" ? today : null },
+    // to a cycle: Monday's day becomes Day 1; to weekly: Day 1 becomes Monday, Day 2 Tuesday …
+    days: ordered.map((d, i) => ({ ...d, weekday: (to === "cycle" ? i : (i + 1) % 7) as Weekday })),
+  };
+}
+
+/** Move a cycle day earlier or later, renumbering the cycle positions. */
+export function moveCycleDay(draft: PlanDraft, dayId: string, delta: number): PlanDraft {
+  const days = [...draft.days].sort((a, b) => a.weekday - b.weekday);
+  const i = days.findIndex((d) => d.id === dayId);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= days.length) return draft;
+  [days[i], days[j]] = [days[j], days[i]];
+  return { ...draft, days: days.map((d, pos) => ({ ...d, weekday: pos as Weekday })) };
 }

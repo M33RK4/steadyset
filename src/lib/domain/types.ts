@@ -57,6 +57,7 @@ export interface PlanExercise {
 export interface PlanDay {
   id: string;
   planId: string;
+  /** Weekly plans: the weekday. Cycle plans: the day's position in the cycle (0 = Day 1). */
   weekday: Weekday;
   name: string;
   kind: DayKind;
@@ -65,9 +66,18 @@ export interface PlanDay {
   optional: boolean;
 }
 
+/**
+ * "weekly": every day is tied to a weekday. "cycle": the days repeat in order (e.g. Push → Pull →
+ * Legs → Rest → Push …) whatever the weekday. Plans saved before cycles existed have none = weekly.
+ */
+export type PlanSchedule = "weekly" | "cycle";
+
 export interface Plan {
   id: string;
   name: string;
+  schedule?: PlanSchedule;
+  /** Cycle plans: the date on which Day 1 of the cycle falls (the cycle repeats from there). */
+  cycleStart?: LocalDate | null;
   description: string;
   isActive: boolean;
   archivedAt: string | null;

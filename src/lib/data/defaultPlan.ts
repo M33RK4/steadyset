@@ -1,4 +1,4 @@
-import type { DayKind, TargetUnit, Weekday } from "../domain/types";
+import type { DayKind, PlanSchedule, TargetUnit, Weekday } from "../domain/types";
 
 export interface TemplateExercise {
   slug: string;
@@ -12,6 +12,7 @@ export interface TemplateExercise {
 }
 
 export interface TemplateDay {
+  /** Weekday, or the position in the cycle for cycle templates. */
   weekday: Weekday;
   name: string;
   kind: DayKind;
@@ -23,6 +24,7 @@ export interface TemplateDay {
 export interface PlanTemplate {
   key: string;
   name: string;
+  schedule?: PlanSchedule;
   description: string;
   days: TemplateDay[];
 }
@@ -111,4 +113,66 @@ export const BALANCED_TONING_BEGINNER: PlanTemplate = {
   ],
 };
 
-export const PLAN_TEMPLATES: PlanTemplate[] = [BALANCED_TONING_BEGINNER];
+/**
+ * A repeating 4-day cycle, not tied to weekdays: push muscles, pull muscles, legs, then rest.
+ * Every muscle group is trained about twice every 8 days with two to three days to recover.
+ */
+export const PUSH_PULL_LEGS_REST: PlanTemplate = {
+  key: "push-pull-legs-rest",
+  name: "Push · Pull · Legs · Rest",
+  schedule: "cycle",
+  description:
+    "A 4-day cycle that keeps repeating whatever the weekday: a push day (chest, shoulders, triceps), a pull day (back, biceps), a leg day (thighs and glutes), then a rest day. Each muscle gets trained about twice every 8 days.",
+  days: [
+    {
+      weekday: 0,
+      name: "Push",
+      kind: "strength",
+      notes: "Chest, shoulders and the back of the arms.",
+      exercises: [
+        { slug: "chest-press-machine", sets: 3, repsMin: 8, repsMax: 12, restSeconds: 90 },
+        { slug: "incline-chest-press-machine", sets: 3, repsMin: 10, repsMax: 12, restSeconds: 90 },
+        { slug: "db-shoulder-press", sets: 3, repsMin: 8, repsMax: 12, restSeconds: 90 },
+        { slug: "db-lateral-raise", sets: 3, repsMin: 12, repsMax: 15, restSeconds: 60 },
+        { slug: "triceps-rope-pushdown", sets: 3, repsMin: 10, repsMax: 15, restSeconds: 60 },
+      ],
+    },
+    {
+      weekday: 1,
+      name: "Pull",
+      kind: "strength",
+      notes: "Back and biceps, plus a little core.",
+      exercises: [
+        { slug: "lat-pulldown", sets: 3, repsMin: 8, repsMax: 12, restSeconds: 90 },
+        { slug: "seated-cable-row", sets: 3, repsMin: 10, repsMax: 12, restSeconds: 90 },
+        { slug: "chest-supported-row", sets: 2, repsMin: 10, repsMax: 12, restSeconds: 75 },
+        { slug: "db-biceps-curl", sets: 3, repsMin: 10, repsMax: 12, restSeconds: 60 },
+        { slug: "db-hammer-curl", sets: 2, repsMin: 10, repsMax: 12, restSeconds: 60 },
+        { slug: "dead-bug", sets: 2, repsMin: 8, repsMax: 10, perSide: true, restSeconds: 45 },
+      ],
+    },
+    {
+      weekday: 2,
+      name: "Legs",
+      kind: "strength",
+      notes: "Thighs, hamstrings and glutes, finished with a plank.",
+      exercises: [
+        { slug: "leg-press", sets: 3, repsMin: 10, repsMax: 12, restSeconds: 90 },
+        { slug: "db-romanian-deadlift", sets: 3, repsMin: 8, repsMax: 12, restSeconds: 90 },
+        { slug: "hip-thrust-machine", sets: 3, repsMin: 10, repsMax: 12, restSeconds: 90 },
+        { slug: "seated-leg-curl", sets: 2, repsMin: 10, repsMax: 15, restSeconds: 60 },
+        { slug: "hip-abduction-machine", sets: 2, repsMin: 15, repsMax: 20, restSeconds: 60 },
+        { slug: "forearm-plank", sets: 2, repsMin: 20, repsMax: 40, targetUnit: "seconds", restSeconds: 45 },
+      ],
+    },
+    {
+      weekday: 3,
+      name: "Rest",
+      kind: "rest",
+      notes: "Recovery is when the muscles adapt. A walk or some stretching is plenty.",
+      exercises: [],
+    },
+  ],
+};
+
+export const PLAN_TEMPLATES: PlanTemplate[] = [BALANCED_TONING_BEGINNER, PUSH_PULL_LEGS_REST];

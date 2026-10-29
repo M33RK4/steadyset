@@ -36,6 +36,8 @@ const COLUMNS: Record<TableName, Record<string, string>> = {
   plans: {
     id: "id",
     name: "name",
+    schedule: "schedule",
+    cycleStart: "cycle_start",
     description: "description",
     isActive: "is_active",
     archivedAt: "archived_at",

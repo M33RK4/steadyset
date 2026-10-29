@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import {
   archivePlan,
+  cyclePosition,
+  dayLabel,
   daysOfPlan,
   deletePlan,
   duplicatePlan,
@@ -13,14 +15,15 @@ import {
   exercisesOfDay,
   formatTarget,
   instantiateTemplate,
+  isCycle,
   resetPlanToTemplate,
   setActivePlan,
 } from "@/lib/plans/planOps";
-import { PLAN_TEMPLATES } from "@/lib/data/defaultPlan";
+import { PLAN_TEMPLATES, type PlanTemplate } from "@/lib/data/defaultPlan";
 import type { Plan, PlanDay } from "@/lib/domain/types";
 import { orderedWeekdays, WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/util/dates";
-import { Badge, Button, EmptyState, PageHeader, cx } from "@/components/ui/primitives";
-import { useConfirm, useToast } from "@/components/ui/Dialog";
+import { Badge, Button, EmptyState, IconButton, PageHeader, Switch, cx } from "@/components/ui/primitives";
+import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { DAY_KIND_LABEL, useExercises, useToday } from "../common";
 import { ExerciseName } from "../library/ExerciseSheet";
@@ -33,6 +36,7 @@ export function WorkoutsScreen() {
   const today = useToday();
   const [logOpen, setLogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [starting, setStarting] = useState<PlanTemplate | null>(null);
   const live = data.plans.filter((p) => !p.archivedAt).sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.createdAt.localeCompare(b.createdAt));
   const archived = data.plans.filter((p) => p.archivedAt);
 
@@ -54,7 +58,15 @@ export function WorkoutsScreen() {
       />
 
       {live.length === 0 ? (
-        <EmptyState icon="dumbbell" title="No plans yet" action={<Button onClick={() => router.push("/workouts/new")} icon="plus">Create plan</Button>}>
+        <EmptyState
+          icon="dumbbell"
+          title="No plans yet"
+          action={
+            <Button onClick={() => router.push("/workouts/new")} icon="plus">
+              Create plan
+            </Button>
+          }
+        >
           Create your own plan, or copy the beginner template below.
         </EmptyState>
       ) : (
@@ -72,21 +84,30 @@ export function WorkoutsScreen() {
         {PLAN_TEMPLATES.map((t) => (
           <div key={t.key} className="card p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[220px]">
-              <p className="font-semibold">{t.name}</p>
+              <p className="font-semibold flex flex-wrap items-center gap-2">
+                {t.name}
+                {t.schedule === "cycle" && <Badge tone="accent">Repeating cycle</Badge>}
+              </p>
               <p className="text-sm text-muted">{t.description}</p>
             </div>
-            <Button
-              variant="secondary"
-              icon="copy"
-              onClick={() => {
-                const r = instantiateTemplate(data, t, { makeActive: false, name: `${t.name} (my copy)` });
-                commit(r.changes);
-                toast("Template copied — edit it to make it yours", { tone: "success" });
-                router.push(`/workouts/${r.planId}`);
-              }}
-            >
-              Copy and customise
-            </Button>
+            {t.schedule === "cycle" ? (
+              <Button icon="play" onClick={() => setStarting(t)}>
+                Use this plan
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                icon="copy"
+                onClick={() => {
+                  const r = instantiateTemplate(data, t, { makeActive: false, name: `${t.name} (my copy)` });
+                  commit(r.changes);
+                  toast("Template copied — edit it to make it yours", { tone: "success" });
+                  router.push(`/workouts/${r.planId}`);
+                }}
+              >
+                Copy and customise
+              </Button>
+            )}
           </div>
         ))}
       </section>
@@ -101,7 +122,88 @@ export function WorkoutsScreen() {
       )}
 
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={today} day={null} />
+      {starting && <StartCycleDialog template={starting} onClose={() => setStarting(null)} />}
     </div>
+  );
+}
+
+/** Start a cycle template: choose the order of its days, which day today is, and make it active. */
+function StartCycleDialog({ template, onClose }: { template: PlanTemplate; onClose: () => void }) {
+  const { commit } = useApp();
+  const toast = useToast();
+  const [order, setOrder] = useState(() => template.days.map((_, i) => i));
+  const [todayPos, setTodayPos] = useState(0);
+  const [makeActive, setMakeActive] = useState(true);
+  const move = (pos: number, delta: number) =>
+    setOrder((o) => {
+      const n = [...o];
+      [n[pos], n[pos + delta]] = [n[pos + delta], n[pos]];
+      return n;
+    });
+  const dayName = (pos: number) => template.days[order[pos]].name;
+  const sequence = order.map((i) => template.days[i].name);
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Start ${template.name}`}
+      description="It repeats in this order every day, whatever the weekday. You can change everything later with Edit."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            icon="check"
+            onClick={() => {
+              const name = sequence.join(" · ");
+              commit((d) => instantiateTemplate(d, template, { makeActive, order, todayPosition: todayPos, name }).changes);
+              toast(makeActive ? `${name} is now your plan. Today is ${dayName(todayPos)}.` : `${name} added to your plans`, { tone: "success" });
+              onClose();
+            }}
+          >
+            {makeActive ? "Start plan" : "Add plan"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <section>
+          <p className="eyebrow mb-2">Order</p>
+          <ol className="space-y-2">
+            {order.map((ti, pos) => (
+              <li key={ti} className="tile flex items-center gap-3 p-2 pl-3">
+                <span className="num text-muted w-12 shrink-0 text-sm">Day {pos + 1}</span>
+                <span className="font-bold flex-1">{template.days[ti].name}</span>
+                <IconButton icon="arrowUp" label={`Move ${template.days[ti].name} earlier`} size={38} disabled={pos === 0} onClick={() => move(pos, -1)} />
+                <IconButton icon="arrowDown" label={`Move ${template.days[ti].name} later`} size={38} disabled={pos === order.length - 1} onClick={() => move(pos, 1)} />
+              </li>
+            ))}
+          </ol>
+          <p className="text-sm text-muted mt-2">
+            Then it starts again: {sequence.join(" → ")} → {sequence[0]} …
+          </p>
+        </section>
+        <section>
+          <p className="eyebrow mb-2">What are you doing today?</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Which day of the cycle is today">
+            {order.map((ti, pos) => (
+              <button
+                key={ti}
+                type="button"
+                role="radio"
+                aria-checked={todayPos === pos}
+                onClick={() => setTodayPos(pos)}
+                className={cx("h-10 px-4 rounded-btn font-bold border-2", todayPos === pos ? "bg-accent text-accent-ink border-accent" : "border-line hover:border-accent")}
+              >
+                {template.days[ti].name}
+              </button>
+            ))}
+          </div>
+        </section>
+        <Switch label="Make this my active plan" description="Your active plan decides what shows on Today and in the calendar." checked={makeActive} onChange={setMakeActive} />
+      </div>
+    </Dialog>
   );
 }
 
@@ -119,6 +221,8 @@ function PlanCard({ plan }: { plan: Plan }) {
   const sessionsUsing = data.sessions.filter((s) => s.planId === plan.id).length;
   const byWeekday = new Map(days.map((d) => [d.weekday, d]));
   const opened = days.find((d) => d.id === openDay) ?? null;
+  const cycle = isCycle(plan);
+  const todayPos = cycle && days.length ? cyclePosition(plan.cycleStart ?? today, today, days.length) : -1;
 
   return (
     <article className={cx("card p-5 space-y-4", plan.isActive && "border-accent")} aria-labelledby={`plan-${plan.id}`}>
@@ -131,6 +235,11 @@ function PlanCard({ plan }: { plan: Plan }) {
             {plan.isActive && <Badge tone="accent">Active</Badge>}
             {plan.archivedAt && <Badge>Archived</Badge>}
           </div>
+          {cycle && days.length > 0 && (
+            <p className="text-sm font-semibold text-accent-text mt-1">
+              Repeats every {days.length} days · today is {days[todayPos].name}
+            </p>
+          )}
           {plan.description && <p className="text-muted mt-1 max-w-2xl">{plan.description}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -218,37 +327,73 @@ function PlanCard({ plan }: { plan: Plan }) {
         </div>
       </div>
 
-      <ol className="grid grid-cols-1 sm:grid-cols-7 gap-1.5" aria-label="Weekly schedule">
-        {orderedWeekdays(prefs.weekStartsOn).map((wd) => {
-          const d = byWeekday.get(wd);
-          const selected = d && d.id === openDay;
-          return (
-            <li key={wd}>
-              <button
-                type="button"
-                disabled={!d}
-                onClick={() => d && setOpenDay(selected ? null : d.id)}
-                aria-expanded={d ? !!selected : undefined}
-                aria-label={`${WEEKDAY_NAMES[wd]}: ${d ? d.name : "no workout"}`}
-                className={cx(
-                  "w-full rounded-ctl border px-3 py-2.5 sm:p-2 text-left sm:min-h-[84px] flex flex-row items-center sm:items-start sm:flex-col gap-3 sm:gap-1 transition-colors",
-                  selected ? "border-accent bg-accent-soft" : d && d.kind !== "rest" ? "border-line hover:border-accent bg-surface" : "border-dashed border-line bg-raised",
-                )}
-              >
-                <span className="text-xs font-semibold text-muted w-9 sm:w-auto shrink-0">{WEEKDAY_SHORT[wd]}</span>
-                <span className={cx("text-[13px] leading-tight font-semibold", !d || d.kind === "rest" ? "text-muted" : "")}>{d ? d.name : "—"}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      {cycle ? (
+        <ol className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5" aria-label="Cycle">
+          {days.map((d, pos) => {
+            const selected = d.id === openDay;
+            return (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenDay(selected ? null : d.id)}
+                  aria-expanded={selected}
+                  aria-label={`Day ${pos + 1}: ${d.name}${pos === todayPos ? " (today)" : ""}`}
+                  className={cx(
+                    "w-full rounded-ctl border px-3 py-2.5 text-left min-h-[76px] flex flex-col gap-1 transition-colors",
+                    selected ? "border-accent bg-accent-soft" : d.kind !== "rest" ? "border-line hover:border-accent bg-surface" : "border-dashed border-line bg-raised",
+                    pos === todayPos && "ring-2 ring-accent",
+                  )}
+                >
+                  <span className="text-xs font-semibold text-muted">
+                    Day {pos + 1}
+                    {pos === todayPos && <span className="text-accent-text"> · today</span>}
+                  </span>
+                  <span className={cx("text-[14px] leading-tight font-semibold", d.kind === "rest" && "text-muted")}>{d.name}</span>
+                </button>
+              </li>
+            );
+          })}
+          <li className="hidden lg:grid place-items-center text-muted text-sm" aria-hidden="true">
+            <span className="flex items-center gap-1">
+              <Icon name="restore" size={16} /> repeats
+            </span>
+          </li>
+        </ol>
+      ) : (
+        <ol className="grid grid-cols-1 sm:grid-cols-7 gap-1.5" aria-label="Weekly schedule">
+          {orderedWeekdays(prefs.weekStartsOn).map((wd) => {
+            const d = byWeekday.get(wd);
+            const selected = d && d.id === openDay;
+            return (
+              <li key={wd}>
+                <button
+                  type="button"
+                  disabled={!d}
+                  onClick={() => d && setOpenDay(selected ? null : d.id)}
+                  aria-expanded={d ? !!selected : undefined}
+                  aria-label={`${WEEKDAY_NAMES[wd]}: ${d ? d.name : "no workout"}`}
+                  className={cx(
+                    "w-full rounded-ctl border px-3 py-2.5 sm:p-2 text-left sm:min-h-[84px] flex flex-row items-center sm:items-start sm:flex-col gap-3 sm:gap-1 transition-colors",
+                    selected ? "border-accent bg-accent-soft" : d && d.kind !== "rest" ? "border-line hover:border-accent bg-surface" : "border-dashed border-line bg-raised",
+                  )}
+                >
+                  <span className="text-xs font-semibold text-muted w-9 sm:w-auto shrink-0">{WEEKDAY_SHORT[wd]}</span>
+                  <span className={cx("text-[13px] leading-tight font-semibold", !d || d.kind === "rest" ? "text-muted" : "")}>{d ? d.name : "—"}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
-      {opened && <DayDetail day={opened} canStart={!plan.archivedAt} onStart={() => start(opened, today)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />}
+      {opened && (
+        <DayDetail day={opened} label={dayLabel(plan, opened, WEEKDAY_NAMES)} canStart={!plan.archivedAt} onStart={() => start(opened, today)} exName={(id) => ex.get(id)?.name ?? "Exercise"} />
+      )}
     </article>
   );
 }
 
-function DayDetail({ day, canStart, onStart, exName }: { day: PlanDay; canStart: boolean; onStart: () => void; exName: (id: string) => string }) {
+function DayDetail({ day, label, canStart, onStart, exName }: { day: PlanDay; label: string; canStart: boolean; onStart: () => void; exName: (id: string) => string }) {
   const { data } = useApp();
   const ex = useExercises();
   const items = exercisesOfDay(data, day.id);
@@ -256,7 +401,7 @@ function DayDetail({ day, canStart, onStart, exName }: { day: PlanDay; canStart:
     <div className="rounded-card bg-raised border border-line p-4 space-y-3 anim-pop">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-lg flex-1">
-          {WEEKDAY_NAMES[day.weekday]} · {day.name}
+          {label} · {day.name}
         </h3>
         <Badge>{DAY_KIND_LABEL[day.kind]}</Badge>
         {day.kind !== "rest" && day.kind !== "activity" && <span className="text-sm text-muted">about {estimateMinutes(data, day.id)} min</span>}
