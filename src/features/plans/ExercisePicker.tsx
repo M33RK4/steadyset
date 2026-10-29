@@ -69,7 +69,7 @@ export function ExercisePicker({ open, onClose, onPick, title = "Add exercise" }
                     <ExerciseDemo animation={e.animation} name={e.name} compact />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold truncate">{e.name}</p>
+                    <p className="font-semibold break-words">{e.name}</p>
                     <p className="text-sm text-muted truncate">{e.primaryMuscles.join(", ")}</p>
                   </div>
                   <Icon name="plus" size={18} className="text-accent-text" />

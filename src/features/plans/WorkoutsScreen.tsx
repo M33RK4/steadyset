@@ -23,6 +23,7 @@ import { Badge, Button, EmptyState, PageHeader, cx } from "@/components/ui/primi
 import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { DAY_KIND_LABEL, useExercises, useToday } from "../common";
+import { ExerciseName } from "../library/ExerciseSheet";
 import { LogActivityDialog, useStartWorkout } from "../workout/useStartWorkout";
 
 export function WorkoutsScreen() {
@@ -264,11 +265,9 @@ function DayDetail({ day, canStart, onStart, exName }: { day: PlanDay; canStart:
       {items.length > 0 && (
         <ol className="divide-y divide-line">
           {items.map((e, i) => (
-            <li key={e.id} className="py-2 flex items-center gap-3">
-              <span className="num text-muted w-5 text-right">{i + 1}</span>
-              <Link href={`/library/${ex.get(e.exerciseId)?.slug ?? ""}`} className="flex-1 min-w-0 truncate font-medium hover:underline">
-                {exName(e.exerciseId)}
-              </Link>
+            <li key={e.id} className="py-2 flex items-baseline gap-3">
+              <span className="num text-muted w-5 text-right shrink-0">{i + 1}</span>
+              <ExerciseName exerciseId={e.exerciseId} name={exName(e.exerciseId)} className="flex-1 font-medium" />
               <span className="text-sm text-muted whitespace-nowrap">
                 {formatTarget(e)}
                 {e.restSeconds > 0 && e.targetUnit !== "minutes" ? ` · ${e.restSeconds}s rest` : ""}

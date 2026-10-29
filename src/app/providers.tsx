@@ -5,6 +5,7 @@ import { AppStoreProvider } from "@/lib/store/AppStore";
 import { ConfirmProvider, ToastProvider } from "@/components/ui/Dialog";
 import { AppShell } from "@/components/shell/AppShell";
 import { BuddiesProvider } from "@/features/buddies/BuddiesProvider";
+import { ExerciseSheetProvider } from "@/features/library/ExerciseSheet";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -12,7 +13,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <ToastProvider>
         <ConfirmProvider>
           <BuddiesProvider>
-            <AppShell>{children}</AppShell>
+            <ExerciseSheetProvider>
+              <AppShell>{children}</AppShell>
+            </ExerciseSheetProvider>
           </BuddiesProvider>
         </ConfirmProvider>
       </ToastProvider>

@@ -13,6 +13,7 @@ import { Badge, Button, EmptyState, Field, IconButton, Switch, cx } from "@/comp
 import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { ExercisePicker } from "./ExercisePicker";
+import { ExerciseName } from "../library/ExerciseSheet";
 import { DAY_KIND_LABEL, useExercises } from "../common";
 
 type DraftDay = PlanDraft["days"][number];
@@ -341,8 +342,8 @@ function DayEditor({
                   return (
                     <li key={pe.id} className="rounded-ctl border border-line bg-raised p-3 space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="num text-muted w-5 text-right">{i + 1}</span>
-                        <span className="font-semibold flex-1 min-w-0 truncate">{info?.name ?? "Unknown exercise"}</span>
+                        <span className="num text-muted w-5 text-right shrink-0">{i + 1}</span>
+                        <ExerciseName exerciseId={info?.id} name={info?.name ?? "Unknown exercise"} className="font-semibold flex-1" />
                         {info?.custom && <Badge tone="accent">Custom</Badge>}
                         <IconButton icon="arrowUp" label={`Move ${info?.name} up`} size={38} disabled={i === 0} onClick={() => onExMove(i, -1)} />
                         <IconButton icon="arrowDown" label={`Move ${info?.name} down`} size={38} disabled={i === day.exercises.length - 1} onClick={() => onExMove(i, 1)} />

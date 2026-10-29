@@ -15,6 +15,7 @@ import { StatusDot } from "../calendar/StatusDot";
 import { HeroArt } from "@/components/ui/ThemeArt";
 import { BuddyStrip } from "../buddies/BuddyLive";
 import { useBuddies } from "../buddies/BuddiesProvider";
+import { ExerciseName } from "../library/ExerciseSheet";
 
 export function Dashboard() {
   const { data, prefs } = useApp();
@@ -240,8 +241,8 @@ function TodayCard({ day, running, onStart, onLog, exName }: { day: CalendarDay;
           {exs.map((e, i) => (
             <li key={e.id} className="flex items-baseline gap-2 min-w-0">
               <span className="num text-muted w-5 text-right shrink-0">{i + 1}</span>
-              <span className="truncate font-medium">{exName(e.exerciseId)}</span>
-              <span className="text-muted text-sm whitespace-nowrap ml-auto">{formatTarget(e)}</span>
+              <ExerciseName exerciseId={e.exerciseId} name={exName(e.exerciseId)} className="flex-1 font-medium" />
+              <span className="text-muted text-sm whitespace-nowrap ml-auto pl-2">{formatTarget(e)}</span>
             </li>
           ))}
         </ol>

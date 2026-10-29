@@ -37,6 +37,7 @@ import { useStartWorkout } from "./useStartWorkout";
 import { ExercisePicker } from "../plans/ExercisePicker";
 import { uuid } from "@/lib/util/ids";
 import { BuddyStrip } from "../buddies/BuddyLive";
+import { exerciseDescription, useExerciseSheet } from "../library/ExerciseSheet";
 
 export function WorkoutScreen() {
   const { active, data, setActive } = useApp();
@@ -253,7 +254,7 @@ function ExerciseRow({ se, isCurrent, onSelect, animation }: { se: SessionExerci
           <ExerciseDemo animation={animation} name={se.name} compact />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold truncate">{se.name}</p>
+          <p className="font-semibold break-words">{se.name}</p>
           <p className="text-sm text-muted">
             {formatTarget({ ...se, sets: se.targetSets })}
             {!isTimed(se) && ` · ${done}/${se.targetSets} sets`}
@@ -396,6 +397,9 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
 }
 
 function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: string }) {
+  const info = useExercises().get(se.exerciseId);
+  const openSheet = useExerciseSheet();
+  const about = info ? exerciseDescription(info) : "";
   return (
     <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4 items-start">
       <div className="min-w-0 space-y-1 order-2 sm:order-1">
@@ -407,6 +411,12 @@ function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: str
           Target {formatTarget({ ...se, sets: se.targetSets })}
           {se.restSeconds > 0 && !isTimed(se) ? ` · ${se.restSeconds}s rest` : ""}
         </p>
+        {about && <p className="pt-2 leading-relaxed">{about}</p>}
+        {info && (
+          <button type="button" onClick={() => openSheet(info.id)} className="mt-2 inline-flex items-center gap-1.5 font-bold text-accent-text hover:underline">
+            <Icon name="info" size={18} /> How to do it
+          </button>
+        )}
       </div>
       <div className="order-1 sm:order-2 max-w-[300px] w-full mx-auto sm:max-w-none">
         <ExerciseDemo animation={animation} name={se.name} />
@@ -684,7 +694,7 @@ function SummaryDialog({ open, onClose, onSave, onDiscard }: { open: boolean; on
         <ul className="divide-y divide-line">
           {list.map((e) => (
             <li key={e.id} className="py-2 flex items-center gap-2">
-              <span className="flex-1 min-w-0 truncate">{e.name}</span>
+              <span className="flex-1 min-w-0 break-words">{e.name}</span>
               <span className="text-sm text-muted num">{isTimed(e) ? (e.durationSeconds ? `${Math.round(e.durationSeconds / 60)} min` : "—") : `${setsOf(data, e.id).length}/${e.targetSets} sets`}</span>
               <Badge tone={e.status === "completed" ? "done" : e.status === "skipped" ? "neutral" : "partial"}>{e.status === "completed" ? "Done" : e.status === "skipped" ? "Skipped" : e.status === "active" ? "Started" : "Not done"}</Badge>
             </li>

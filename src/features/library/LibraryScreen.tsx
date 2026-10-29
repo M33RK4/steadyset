@@ -108,6 +108,12 @@ export function ExerciseDetailScreen() {
               <dd className="font-semibold">{e.secondaryMuscles.join(", ") || "—"}</dd>
             </div>
           </dl>
+          {e.summary && (
+            <section>
+              <h2 className="text-lg mb-1">What it is</h2>
+              <p className="text-[17px] leading-relaxed">{e.summary}</p>
+            </section>
+          )}
           {e.startingPosition && (
             <section>
               <h2 className="text-lg mb-1">Starting position</h2>

@@ -17,6 +17,8 @@ export interface Exercise {
   id: string; // stable UUID
   slug: string;
   name: string;
+  /** A short plain-language "what is this exercise" — built-ins only; custom exercises may not have one. */
+  summary?: string;
   kind: ExerciseKind;
   primaryMuscles: string[];
   secondaryMuscles: string[];

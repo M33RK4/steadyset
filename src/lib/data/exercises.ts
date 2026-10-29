@@ -7,6 +7,8 @@ const defs: Def[] = [
   {
     slug: "hip-thrust-machine",
     name: "Hip Thrust Machine",
+    summary:
+      "You sit leaning back against a pad with a padded belt across your hips, then push your hips up towards the ceiling. It's one of the best exercises for the glutes (your bum muscles) — you should feel them squeeze at the top.",
     kind: "reps",
     primaryMuscles: ["Glutes"],
     secondaryMuscles: ["Hamstrings", "Core"],
@@ -35,6 +37,8 @@ const defs: Def[] = [
   {
     slug: "db-romanian-deadlift",
     name: "Dumbbell Romanian Deadlift",
+    summary:
+      "Holding a dumbbell in each hand, you bend forward from the hips with a flat back, letting the weights slide down your legs, then stand back up. It trains the back of your legs (hamstrings) and glutes — you'll feel a stretch behind your thighs.",
     kind: "reps",
     primaryMuscles: ["Hamstrings", "Glutes"],
     secondaryMuscles: ["Lower back", "Forearms"],
@@ -55,6 +59,8 @@ const defs: Def[] = [
   {
     slug: "leg-press",
     name: "Leg Press",
+    summary:
+      "You sit in a machine, put your feet on a big platform and push it away from you until your legs are almost straight. It works the front of your thighs (quads) and glutes — like a squat, but the machine supports your back.",
     kind: "reps",
     primaryMuscles: ["Quadriceps", "Glutes"],
     secondaryMuscles: ["Hamstrings", "Adductors"],
@@ -75,6 +81,8 @@ const defs: Def[] = [
   {
     slug: "hip-abduction-machine",
     name: "Hip Abduction Machine",
+    summary:
+      "You sit with the machine's pads against the outside of your knees and push your knees apart, then let them come back together slowly. It trains the side of your hips (outer glutes), which helps keep your knees and hips stable.",
     kind: "reps",
     primaryMuscles: ["Glutes (side)"],
     secondaryMuscles: ["Hip stabilisers"],
@@ -95,6 +103,8 @@ const defs: Def[] = [
   {
     slug: "seated-leg-curl",
     name: "Seated Leg Curl",
+    summary:
+      "You sit with a pad behind your ankles and bend your knees to pull the pad down and under the seat. It works the back of your thighs (hamstrings) on their own.",
     kind: "reps",
     primaryMuscles: ["Hamstrings"],
     secondaryMuscles: ["Calves (minor)"],
@@ -115,6 +125,8 @@ const defs: Def[] = [
   {
     slug: "chest-press-machine",
     name: "Chest Press Machine",
+    summary:
+      "You sit upright and push two handles straight forward from your chest until your arms are almost straight, like a push-up while sitting. It builds your chest, the front of your shoulders and the back of your arms (triceps).",
     kind: "reps",
     primaryMuscles: ["Chest"],
     secondaryMuscles: ["Front shoulders", "Triceps"],
@@ -135,6 +147,8 @@ const defs: Def[] = [
   {
     slug: "lat-pulldown",
     name: "Lat Pulldown",
+    summary:
+      "Sitting under a high bar, you pull it down to the top of your chest, then let it rise slowly. It works the big muscles at the sides of your back (lats) — think of it as a supported pull-up.",
     kind: "reps",
     primaryMuscles: ["Upper back (lats)"],
     secondaryMuscles: ["Biceps", "Rear shoulders"],
@@ -155,6 +169,8 @@ const defs: Def[] = [
   {
     slug: "seated-cable-row",
     name: "Seated Cable Row",
+    summary:
+      "Sitting with your feet braced, you pull a handle towards your stomach while squeezing your shoulder blades together. It builds the middle of your back and helps your posture.",
     kind: "reps",
     primaryMuscles: ["Mid back", "Lats"],
     secondaryMuscles: ["Biceps", "Rear shoulders"],
@@ -175,6 +191,8 @@ const defs: Def[] = [
   {
     slug: "db-lateral-raise",
     name: "Dumbbell Lateral Raise",
+    summary:
+      "Holding light dumbbells at your sides, you lift your arms out to the side up to shoulder height, then lower them slowly. It shapes the side of your shoulders — light weights are plenty.",
     kind: "reps",
     primaryMuscles: ["Side shoulders"],
     secondaryMuscles: ["Upper traps"],
@@ -195,6 +213,8 @@ const defs: Def[] = [
   {
     slug: "db-biceps-curl",
     name: "Dumbbell Biceps Curl",
+    summary:
+      "Holding a dumbbell in each hand with palms facing forward, you bend your elbows to bring the weights up to your shoulders, then lower them. It works the front of your upper arms (biceps).",
     kind: "reps",
     primaryMuscles: ["Biceps"],
     secondaryMuscles: ["Forearms"],
@@ -215,6 +235,8 @@ const defs: Def[] = [
   {
     slug: "triceps-rope-pushdown",
     name: "Triceps Rope Pushdown",
+    summary:
+      "Standing at a cable machine with a rope attached up high, you keep your elbows at your sides and push the rope down until your arms are straight. It works the back of your upper arms (triceps).",
     kind: "reps",
     primaryMuscles: ["Triceps"],
     secondaryMuscles: ["Forearms"],
@@ -235,6 +257,8 @@ const defs: Def[] = [
   {
     slug: "treadmill-walk",
     name: "Treadmill Walking",
+    summary:
+      "Walking on a treadmill at a pace where you can still talk. It warms you up, gets your heart going and is easy on the joints — raise the incline a little to make it harder.",
     kind: "cardio",
     primaryMuscles: ["Cardiovascular system"],
     secondaryMuscles: ["Legs", "Glutes"],
@@ -255,6 +279,8 @@ const defs: Def[] = [
   {
     slug: "mobility-flow",
     name: "Hip, Shoulder & Upper-Back Mobility",
+    summary:
+      "A gentle routine of stretches done on a mat — mostly on your hands and knees — that loosens your hips, shoulders and upper back. It isn't about strength; it helps you move more freely and feel less stiff.",
     kind: "mobility",
     primaryMuscles: ["Hips", "Thoracic spine", "Shoulders"],
     secondaryMuscles: ["Core"],
@@ -275,6 +301,8 @@ const defs: Def[] = [
   {
     slug: "glute-bridge",
     name: "Glute Bridge",
+    summary:
+      "Lying on your back with knees bent and feet flat, you lift your hips off the floor until your body is a straight line from shoulders to knees. A no-equipment way to train your glutes.",
     kind: "reps",
     primaryMuscles: ["Glutes"],
     secondaryMuscles: ["Hamstrings", "Core"],
@@ -295,6 +323,8 @@ const defs: Def[] = [
   {
     slug: "low-step-up",
     name: "Low Step-Ups",
+    summary:
+      "You step up onto a low box or step with one foot, stand tall on it, then step back down. It works your thighs and glutes one leg at a time and helps balance — like climbing a stair slowly.",
     kind: "reps",
     primaryMuscles: ["Glutes", "Quadriceps"],
     secondaryMuscles: ["Hamstrings", "Balance"],
@@ -315,6 +345,8 @@ const defs: Def[] = [
   {
     slug: "cable-glute-kickback",
     name: "Cable Glute Kickback",
+    summary:
+      "With a strap around one ankle attached to a low cable, you kick that leg straight back behind you, then return it slowly. It isolates the glute of the moving leg.",
     kind: "reps",
     primaryMuscles: ["Glutes"],
     secondaryMuscles: ["Hamstrings", "Core"],
@@ -335,6 +367,8 @@ const defs: Def[] = [
   {
     slug: "incline-chest-press-machine",
     name: "Incline Chest Press Machine",
+    summary:
+      "Like the chest press, but the seat leans back so you push the handles up and forward at an angle. It focuses on the upper part of your chest and the front of your shoulders.",
     kind: "reps",
     primaryMuscles: ["Upper chest"],
     secondaryMuscles: ["Front shoulders", "Triceps"],
@@ -355,6 +389,8 @@ const defs: Def[] = [
   {
     slug: "chest-supported-row",
     name: "Chest-Supported Row",
+    summary:
+      "You lie face-down on an angled pad and pull the handles (or dumbbells) up towards your ribs. It trains the middle of your back while the pad supports you, so your lower back can relax.",
     kind: "reps",
     primaryMuscles: ["Mid back", "Lats"],
     secondaryMuscles: ["Rear shoulders", "Biceps"],
@@ -375,6 +411,8 @@ const defs: Def[] = [
   {
     slug: "db-hammer-curl",
     name: "Dumbbell Hammer Curl",
+    summary:
+      "Like a biceps curl, but your palms face each other the whole time, as if holding a hammer. It works your biceps plus the muscles along the top of your forearms.",
     kind: "reps",
     primaryMuscles: ["Biceps", "Brachialis"],
     secondaryMuscles: ["Forearms"],
@@ -395,6 +433,8 @@ const defs: Def[] = [
   {
     slug: "forearm-plank",
     name: "Forearm Plank",
+    summary:
+      "You hold your body straight like a board, resting on your forearms and toes, without letting your hips sag or pike up. It strengthens your whole core (stomach and lower back) by holding still.",
     kind: "time",
     primaryMuscles: ["Core"],
     secondaryMuscles: ["Shoulders", "Glutes"],
@@ -415,6 +455,8 @@ const defs: Def[] = [
   {
     slug: "dead-bug",
     name: "Dead Bug",
+    summary:
+      "Lying on your back with arms up and knees bent above your hips, you slowly stretch out the opposite arm and leg while keeping your lower back pressed into the floor. A safe, controlled core exercise.",
     kind: "reps",
     primaryMuscles: ["Core"],
     secondaryMuscles: ["Hip flexors"],
@@ -436,6 +478,8 @@ const defs: Def[] = [
   {
     slug: "goblet-squat",
     name: "Goblet Squat",
+    summary:
+      "Holding one dumbbell against your chest, you sit down between your heels as if onto a low chair, then stand back up. It trains your thighs and glutes, and holding the weight in front helps you stay upright.",
     kind: "reps",
     primaryMuscles: ["Quadriceps", "Glutes"],
     secondaryMuscles: ["Core", "Adductors"],
@@ -456,6 +500,8 @@ const defs: Def[] = [
   {
     slug: "incline-push-up",
     name: "Incline Push-Up",
+    summary:
+      "A push-up with your hands on a bench or sturdy surface instead of the floor, which makes it easier. It works your chest, shoulders, triceps and core — the higher the surface, the easier it is.",
     kind: "reps",
     primaryMuscles: ["Chest"],
     secondaryMuscles: ["Triceps", "Front shoulders", "Core"],
@@ -476,6 +522,8 @@ const defs: Def[] = [
   {
     slug: "db-shoulder-press",
     name: "Seated Dumbbell Shoulder Press",
+    summary:
+      "Sitting with back support and holding dumbbells at shoulder height, you press them straight up overhead, then lower them back down. It builds your shoulders and the back of your arms.",
     kind: "reps",
     primaryMuscles: ["Shoulders"],
     secondaryMuscles: ["Triceps", "Upper chest"],
@@ -496,6 +544,8 @@ const defs: Def[] = [
   {
     slug: "stationary-bike",
     name: "Stationary Bike",
+    summary:
+      "Pedalling on an exercise bike at a comfortable, steady pace. It gets your heart rate up and warms your legs without any impact on your joints.",
     kind: "cardio",
     primaryMuscles: ["Cardiovascular system"],
     secondaryMuscles: ["Quadriceps", "Glutes"],
