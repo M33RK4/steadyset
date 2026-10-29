@@ -37,6 +37,7 @@ import { useStartWorkout } from "./useStartWorkout";
 import { ExercisePicker } from "../plans/ExercisePicker";
 import { uuid } from "@/lib/util/ids";
 import { BuddyStrip } from "../buddies/BuddyLive";
+import { CardFlower } from "@/components/ui/ThemeArt";
 import { exerciseDescription, useExerciseSheet } from "../library/ExerciseSheet";
 
 export function WorkoutScreen() {
@@ -93,7 +94,11 @@ function StartChooser() {
         </ul>
       ) : (
         <EmptyState icon="dumbbell" title="No active plan">
-          Choose a plan in <Link href="/workouts" className="underline font-semibold">My Workouts</Link>, or start an empty workout.
+          Choose a plan in{" "}
+          <Link href="/workouts" className="underline font-semibold">
+            My Workouts
+          </Link>
+          , or start an empty workout.
         </EmptyState>
       )}
       <Button variant="secondary" icon="plus" onClick={() => start(null, today, "Custom workout")}>
@@ -166,25 +171,28 @@ function ActiveWorkout() {
       <ProgressBar value={prog.total ? prog.completed / prog.total : 0} label="Workout progress" />
       <BuddyStrip onlyLive title="Training with you right now" />
 
-      {timerVisible ? (
-        <RestPanel current={current} />
-      ) : current ? (
-        <CurrentExercise key={current.id} se={current} onNext={goNext} />
-      ) : (
-        <div className="card p-6 text-center space-y-3">
-          <h2 className="text-xl">Ready when you are</h2>
-          <p className="text-muted">Start with the first exercise, or tap any exercise below.</p>
-          {list.length > 0 ? (
-            <Button size="xl" icon="play" onClick={() => select((nextPendingExercise(data, session.id) ?? list[0]).id)}>
-              Start {(nextPendingExercise(data, session.id) ?? list[0]).name}
-            </Button>
-          ) : (
-            <Button size="lg" icon="plus" onClick={() => setPickerOpen(true)}>
-              Add an exercise
-            </Button>
-          )}
-        </div>
-      )}
+      <div className="relative pt-3">
+        <CardFlower />
+        {timerVisible ? (
+          <RestPanel current={current} />
+        ) : current ? (
+          <CurrentExercise key={current.id} se={current} onNext={goNext} />
+        ) : (
+          <div className="card p-6 text-center space-y-3">
+            <h2 className="text-xl">Ready when you are</h2>
+            <p className="text-muted">Start with the first exercise, or tap any exercise below.</p>
+            {list.length > 0 ? (
+              <Button size="xl" icon="play" onClick={() => select((nextPendingExercise(data, session.id) ?? list[0]).id)}>
+                Start {(nextPendingExercise(data, session.id) ?? list[0]).name}
+              </Button>
+            ) : (
+              <Button size="lg" icon="plus" onClick={() => setPickerOpen(true)}>
+                Add an exercise
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Exercise list */}
       <section aria-labelledby="ex-list-h" className="space-y-2">
@@ -301,7 +309,7 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
   const isSeconds = se.targetUnit === "seconds";
   const prevSet = sets[sets.length - 1];
   const [reps, setReps] = useState<number | null>(prevSet?.reps ?? (isSeconds ? se.repsMax : se.repsMax));
-  const [weight, setWeight] = useState<number | null>(() => (prevSet?.weight ?? lastWeightFor(data, se.exerciseId, prefs.units)));
+  const [weight, setWeight] = useState<number | null>(() => prevSet?.weight ?? lastWeightFor(data, se.exerciseId, prefs.units));
   const [minutes, setMinutes] = useState<number | null>(se.repsMax);
   const [showTips, setShowTips] = useState(false);
   const next = nextPendingExercise(data, se.sessionId, se.id);
@@ -335,7 +343,12 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
       <section className="card p-5 space-y-4" aria-labelledby="cur-h">
         <ExerciseHeader se={se} animation={info?.animation ?? "generic"} />
         {se.status === "completed" ? (
-          <CompleteBlock se={se} next={next?.name} onNext={onNext} onUndo={() => step((d, a) => ({ changes: [{ table: "sessionExercises", op: "upsert", row: { ...se, status: "active", completedAt: null, durationSeconds: null } }], active: a }))} />
+          <CompleteBlock
+            se={se}
+            next={next?.name}
+            onNext={onNext}
+            onUndo={() => step((d, a) => ({ changes: [{ table: "sessionExercises", op: "upsert", row: { ...se, status: "active", completedAt: null, durationSeconds: null } }], active: a }))}
+          />
         ) : (
           <>
             <p className="text-muted">Target: {formatTarget({ ...se, sets: 1 })}. Do it at your own pace, then record how long you went.</p>
@@ -360,12 +373,20 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
       <SetTracker total={se.targetSets} done={sets.length} />
 
       {se.status === "completed" ? (
-        <CompleteBlock se={se} next={next?.name} onNext={onNext} onUndo={undo} onRest={() => step((d, a) => ({ changes: [], active: startExtraRest(a, se.restSeconds || prefs.defaultRestSeconds, new Date()) }))} />
+        <CompleteBlock
+          se={se}
+          next={next?.name}
+          onNext={onNext}
+          onUndo={undo}
+          onRest={() => step((d, a) => ({ changes: [], active: startExtraRest(a, se.restSeconds || prefs.defaultRestSeconds, new Date()) }))}
+        />
       ) : (
         <>
           <div className={cx("grid gap-3", se.usesWeight ? "grid-cols-2" : "grid-cols-1 max-w-xs")}>
             <NumberStepper label={isSeconds ? "Seconds held" : se.perSide ? "Reps (per side)" : "Reps"} value={reps} onChange={setReps} min={0} max={isSeconds ? 600 : 100} />
-            {se.usesWeight && <NumberStepper label={`Weight (${prefs.units})`} value={weight} onChange={setWeight} min={0} max={999} step={prefs.units === "kg" ? 1.25 : 2.5} suffix={prefs.units} allowEmpty />}
+            {se.usesWeight && (
+              <NumberStepper label={`Weight (${prefs.units})`} value={weight} onChange={setWeight} min={0} max={999} step={prefs.units === "kg" ? 1.25 : 2.5} suffix={prefs.units} allowEmpty />
+            )}
           </div>
           {/* Sticky on small screens so it's always within thumb reach. */}
           <div className="sticky bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 -mx-1 px-1">
@@ -695,8 +716,12 @@ function SummaryDialog({ open, onClose, onSave, onDiscard }: { open: boolean; on
           {list.map((e) => (
             <li key={e.id} className="py-2 flex items-center gap-2">
               <span className="flex-1 min-w-0 break-words">{e.name}</span>
-              <span className="text-sm text-muted num">{isTimed(e) ? (e.durationSeconds ? `${Math.round(e.durationSeconds / 60)} min` : "—") : `${setsOf(data, e.id).length}/${e.targetSets} sets`}</span>
-              <Badge tone={e.status === "completed" ? "done" : e.status === "skipped" ? "neutral" : "partial"}>{e.status === "completed" ? "Done" : e.status === "skipped" ? "Skipped" : e.status === "active" ? "Started" : "Not done"}</Badge>
+              <span className="text-sm text-muted num">
+                {isTimed(e) ? (e.durationSeconds ? `${Math.round(e.durationSeconds / 60)} min` : "—") : `${setsOf(data, e.id).length}/${e.targetSets} sets`}
+              </span>
+              <Badge tone={e.status === "completed" ? "done" : e.status === "skipped" ? "neutral" : "partial"}>
+                {e.status === "completed" ? "Done" : e.status === "skipped" ? "Skipped" : e.status === "active" ? "Started" : "Not done"}
+              </Badge>
             </li>
           ))}
         </ul>

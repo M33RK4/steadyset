@@ -6,6 +6,8 @@ import type { Exercise } from "@/lib/domain/types";
 import { Dialog } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { Badge, cx } from "@/components/ui/primitives";
+import { MuscleMap } from "@/components/ui/MuscleMap";
+import { muscleTargets } from "@/lib/data/muscles";
 import { ExerciseDemo } from "../animation/ExerciseDemo";
 import { useExercises } from "../common";
 
@@ -50,14 +52,6 @@ function ExerciseSheet({ exerciseId, onClose }: { exerciseId: string | null; onC
                 </section>
               )}
               <div className="flex flex-wrap gap-1.5">
-                {e.primaryMuscles.map((m) => (
-                  <Badge key={m} tone="accent">
-                    {m}
-                  </Badge>
-                ))}
-                {e.secondaryMuscles.map((m) => (
-                  <Badge key={m}>{m}</Badge>
-                ))}
                 {e.equipment.map((q) => (
                   <Badge key={q} className="bg-transparent">
                     <Icon name="dumbbell" size={13} /> {q}
@@ -66,6 +60,10 @@ function ExerciseSheet({ exerciseId, onClose }: { exerciseId: string | null; onC
               </div>
             </div>
           </div>
+          <section>
+            <p className="eyebrow mb-2">Muscles worked</p>
+            <MuscleMap {...muscleTargets(e)} />
+          </section>
           {e.steps.length > 0 && (
             <section>
               <p className="eyebrow mb-2">How to do it</p>

@@ -84,6 +84,17 @@
   --btn-press: translateY(1px) scale(0.985);
   --hero: radial-gradient(120% 140% at 100% 0%, #cfe5f8 0%, #e6f1fb 45%, #ffffff 100%);
   --dock: rgb(255 255 255 / 0.82);
+  /* exercise illustrations */
+  --fig-line: #1b3150;
+  --fig-skin: #7f9bbb; --fig-skin-far: #a9bed4; --fig-skin-shade: #5f7d9f; --fig-hair: #1b3150;
+  --fig-shirt: #2f6fae; --fig-shirt-far: #79a7d6; --fig-shirt-shade: #245d98;
+  --fig-shorts: #1b3150; --fig-shorts-far: #51698a; --fig-shoe: #f6f9fd; --fig-shoe-far: #d3e2f0; --fig-sole: #e2ad3b;
+  --fig-metal: #b4c6d8; --fig-metal-dark: #7d95ae; --fig-metal-light: #eef4fa;
+  --fig-pad: #24456b; --fig-pad-light: #4a71a0; --fig-plate: #3a5c84; --fig-plate-dark: #263f5e; --fig-plate-light: #7b9cc2;
+  --fig-cable: #5b7694; --fig-rubber: #1b3150; --fig-mat: #cfe3f6; --fig-mat-line: #afcde9;
+  --fig-floor: #dbeaf7; --fig-floor-line: #c2d8ec; --fig-wall: #eef5fc; --fig-screen: #bfe0ff;
+  --fig-muscle: #ff7a4d; --fig-shadow: rgb(27 49 80 / 0.16);
+  --fig-lips: #c97f86; --fig-stripe: #e2ad3b; --fig-sock: #ffffff; --fig-mirror: #dcebf8;
 }
 
 /* ================================================================ Lily — dark
@@ -122,6 +133,16 @@
   --btn-shadow: 0 10px 26px -12px rgb(156 201 240 / 0.45);
   --hero: radial-gradient(120% 140% at 100% 0%, #1f3d66 0%, #152a48 45%, #12213a 100%);
   --dock: rgb(18 33 58 / 0.86);
+  --fig-line: #06101d;
+  --fig-skin: #9fbadb; --fig-skin-far: #6683a6; --fig-skin-shade: #7f9cc0; --fig-hair: #2e5280;
+  --fig-shirt: #9cc9f0; --fig-shirt-far: #5d8bba; --fig-shirt-shade: #7fb0dd;
+  --fig-shorts: #3e6ea3; --fig-shorts-far: #2b4f7a; --fig-shoe: #f0cf7a; --fig-shoe-far: #b49a5a; --fig-sole: #e6f0fb;
+  --fig-metal: #5a7698; --fig-metal-dark: #3a5070; --fig-metal-light: #8eaacb;
+  --fig-pad: #0c1828; --fig-pad-light: #29466e; --fig-plate: #2e4a70; --fig-plate-dark: #1d3150; --fig-plate-light: #5677a3;
+  --fig-cable: #93abc6; --fig-rubber: #06101d; --fig-mat: #1c3556; --fig-mat-line: #2a4b74;
+  --fig-floor: #13233c; --fig-floor-line: #223a5c; --fig-wall: #172a45; --fig-screen: #2b5f93;
+  --fig-muscle: #ff8a5c; --fig-shadow: rgb(0 0 0 / 0.38);
+  --fig-lips: #c98d96; --fig-stripe: #f0cf7a; --fig-sock: #e6f0fb; --fig-mirror: #1b3252;
 }
 
 /* ================================================================ Summit — light
@@ -172,6 +193,16 @@
   --btn-press: translate(2px, 2px);
   --hero: linear-gradient(180deg, #f7f1e1 0%, #f3ecda 100%);
   --dock: rgb(249 246 238 / 0.94);
+  --fig-line: #1c2a22;
+  --fig-skin: #93a38a; --fig-skin-far: #bcc7b2; --fig-skin-shade: #76876d; --fig-hair: #1c2a22;
+  --fig-shirt: #2f5d46; --fig-shirt-far: #6e9071; --fig-shirt-shade: #244a37;
+  --fig-shorts: #1c2a22; --fig-shorts-far: #4c5b50; --fig-shoe: #f9f6ee; --fig-shoe-far: #dcd5c2; --fig-sole: #d4862a;
+  --fig-metal: #a9b2a4; --fig-metal-dark: #6f7a6b; --fig-metal-light: #e3e7de;
+  --fig-pad: #1c2a22; --fig-pad-light: #3f5546; --fig-plate: #3a4a3f; --fig-plate-dark: #26332b; --fig-plate-light: #6b8070;
+  --fig-cable: #5c695f; --fig-rubber: #1c2a22; --fig-mat: #d6ccb3; --fig-mat-line: #c2b597;
+  --fig-floor: #e2dbc8; --fig-floor-line: #cfc6b0; --fig-wall: #f3efe4; --fig-screen: #cfe0c8;
+  --fig-muscle: #e8622c; --fig-shadow: rgb(28 42 34 / 0.18);
+  --fig-lips: #b07a6c; --fig-stripe: #d4862a; --fig-sock: #f9f6ee; --fig-mirror: #e9e4d6;
 }
 
 /* ================================================================ Summit — dark
@@ -209,6 +240,16 @@
   --btn-shadow: 3px 3px 0 #050806;
   --hero: linear-gradient(180deg, #1b2a21 0%, #16201a 100%);
   --dock: rgb(22 32 26 / 0.94);
+  --fig-line: #040705;
+  --fig-skin: #a8b89f; --fig-skin-far: #6d7d66; --fig-skin-shade: #8a9b82; --fig-hair: #3b5244;
+  --fig-shirt: #e0a54a; --fig-shirt-far: #9c7333; --fig-shirt-shade: #c48d36;
+  --fig-shorts: #3f6a50; --fig-shorts-far: #2c4a38; --fig-shoe: #ebe8dc; --fig-shoe-far: #9aa79b; --fig-sole: #e0a54a;
+  --fig-metal: #586b5e; --fig-metal-dark: #3a4a3f; --fig-metal-light: #8a9e8f;
+  --fig-pad: #0a100c; --fig-pad-light: #2b3d31; --fig-plate: #2f4236; --fig-plate-dark: #1f2c24; --fig-plate-light: #536a5a;
+  --fig-cable: #9aa79b; --fig-rubber: #040705; --fig-mat: #22332a; --fig-mat-line: #2f4538;
+  --fig-floor: #18231c; --fig-floor-line: #263529; --fig-wall: #1c2821; --fig-screen: #3e6a50;
+  --fig-muscle: #ff4d5a; --fig-shadow: rgb(0 0 0 / 0.42);
+  --fig-lips: #b98c80; --fig-stripe: #e0a54a; --fig-sock: #ebe8dc; --fig-mirror: #212f27;
 }
 
 @layer base {

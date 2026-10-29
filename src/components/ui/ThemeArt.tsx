@@ -148,6 +148,29 @@ export function HeroArt({ className }: { className?: string }) {
   );
 }
 
+/**
+ * A small lily spray that rests on the top corner of the workout card in the Lily theme, so the
+ * flowers stay visible on phones where the cards cover the whole background.
+ */
+export function CardFlower() {
+  const { prefs } = useApp();
+  if (prefs.theme !== "lily") return null;
+  return (
+    <svg viewBox="-70 -46 140 92" className="absolute -top-9 -right-3 w-28 sm:w-32 z-10 pointer-events-none drop-shadow-[0_4px_6px_rgb(0_0_0_/_0.12)]" aria-hidden="true">
+      <g className="anim-sway">
+        <path d="M40,40 C26,26 6,14 -18,8" fill="none" stroke="var(--stem)" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M40,40 C38,18 32,0 24,-14" fill="none" stroke="var(--stem)" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M30,26 C16,30 4,26 -2,18 C12,16 22,18 30,26 Z" fill="var(--leaf)" stroke="var(--stem)" strokeWidth="1" />
+        <path d="M37,22 C46,10 48,-2 44,-10 C38,-2 36,10 37,22 Z" fill="var(--leaf)" stroke="var(--stem)" strokeWidth="1" />
+        <g transform="translate(24 -16) rotate(18) scale(0.75)">
+          <path d="M0 0 C 8 -8, 9 -26, 0 -42 C -9 -26, -8 -8, 0 0 Z" fill="var(--petal)" stroke="var(--petal-line)" strokeWidth="1.2" />
+        </g>
+        <LilyFlower x={-20} y={6} scale={0.95} rotate={-16} />
+      </g>
+    </svg>
+  );
+}
+
 /** The app's logo — a dumbbell inside a progress ring — the same in both themes (matches the app icon). */
 export function BrandMark({ size = 36 }: { size?: number }) {
   const id = useId().replace(/:/g, "");

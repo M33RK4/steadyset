@@ -563,6 +563,198 @@ const defs: Def[] = [
     mistakes: ["Seat too low, causing knee strain.", "Resistance so high that you rock side to side."],
     safety: ["Adjust the seat before you start."],
   },
+  {
+    slug: "leg-extension",
+    name: "Leg Extension",
+    summary:
+      "You sit in a machine with a padded bar in front of your lower shins and straighten your knees to lift it, then lower it slowly. It isolates the front of your thighs (quads) — you'll feel them burn near the top.",
+    kind: "reps",
+    primaryMuscles: ["Quadriceps"],
+    secondaryMuscles: [],
+    equipment: ["Leg extension machine"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Sit with your back against the pad, knees lined up with the machine's pivot point and the shin pad resting just above your ankles. Hold the side handles.",
+    steps: [
+      "Brace your core and keep your back and hips against the seat.",
+      "Straighten your knees to lift the pad until your legs are almost straight.",
+      "Squeeze the front of your thighs for a moment at the top.",
+      "Lower slowly until your knees are back at about 90 degrees, then repeat.",
+    ],
+    breathing: "Exhale as you lift, inhale as you lower.",
+    mistakes: ["Swinging the weight up with momentum.", "Lifting the hips off the seat to help.", "Letting the weight drop quickly on the way down."],
+    safety: ["Line your knees up with the machine's pivot so the joint isn't strained.", "Stay in a pain-free range — stop a little short of the top if your knees complain."],
+  },
+  {
+    slug: "lying-leg-curl",
+    name: "Lying Leg Curl",
+    summary:
+      "You lie face down with a padded roller behind your ankles and bend your knees to curl it towards your bum. It works the back of your thighs (hamstrings) — the lying version of the seated leg curl.",
+    kind: "reps",
+    primaryMuscles: ["Hamstrings"],
+    secondaryMuscles: ["Calves"],
+    equipment: ["Lying leg curl machine"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Lie face down on the bench with your knees just past the end of the pad and the roller resting on the back of your lower legs, just above the heels. Hold the handles.",
+    steps: [
+      "Press your hips gently into the pad and keep them there.",
+      "Bend your knees to curl the roller up towards your glutes.",
+      "Pause and squeeze the back of your thighs.",
+      "Lower slowly until your legs are almost straight, then repeat.",
+    ],
+    breathing: "Exhale as you curl, inhale as you lower.",
+    mistakes: ["Lifting the hips off the bench to finish the rep.", "Kicking the weight up fast.", "Letting the weight drop on the way down."],
+    safety: ["Keep your hips down so your lower back doesn't arch.", "Start light — the hamstrings cramp easily at first."],
+  },
+  {
+    slug: "preacher-curl",
+    name: "Preacher Curl",
+    summary:
+      "Sitting at an angled pad, you rest the backs of your upper arms on it and curl a bar up towards your shoulders. The pad stops you from swinging, so all the work goes into your biceps.",
+    kind: "reps",
+    primaryMuscles: ["Biceps"],
+    secondaryMuscles: ["Brachialis", "Forearms"],
+    equipment: ["Preacher bench", "EZ bar or dumbbells"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Sit at the preacher bench with your armpits snug against the top of the angled pad and the backs of your upper arms resting on it. Hold the EZ bar with an underhand grip, arms almost straight.",
+    steps: [
+      "Keep your upper arms flat on the pad the whole time.",
+      "Curl the bar up towards your shoulders.",
+      "Squeeze your biceps at the top without letting your elbows lift.",
+      "Lower slowly until your arms are almost straight, then repeat.",
+    ],
+    breathing: "Exhale as you curl, inhale as you lower.",
+    mistakes: ["Lifting the elbows off the pad.", "Dropping into a fully locked-out arm at the bottom.", "Leaning back to help the weight up."],
+    safety: ["Don't bounce at the bottom — the stretched position is where the elbows are most at risk.", "Use a lighter weight than for a standing curl."],
+  },
+  {
+    slug: "chin-up",
+    name: "Chin-Up",
+    summary:
+      "You hang from a bar with your palms facing you and pull yourself up until your chin passes the bar. It works your back (lats) and biceps together, and it's a classic test of upper-body strength.",
+    kind: "reps",
+    primaryMuscles: ["Lats", "Biceps"],
+    secondaryMuscles: ["Mid back", "Rear shoulders", "Forearms", "Core"],
+    equipment: ["Pull-up bar", "Assisted pull-up machine or band (optional)"],
+    difficulty: "intermediate",
+    usesWeight: false,
+    startingPosition:
+      "Hang from a pull-up bar with your hands about shoulder-width apart and palms facing you, arms straight and legs slightly bent or crossed behind you.",
+    steps: [
+      "Pull your shoulders down and back to start the movement.",
+      "Pull yourself up by driving your elbows down towards your ribs.",
+      "Keep going until your chin is above the bar.",
+      "Lower yourself slowly all the way down to a full hang, then repeat.",
+    ],
+    breathing: "Exhale as you pull up, inhale as you lower.",
+    mistakes: ["Swinging or kicking the legs to get up.", "Only doing the top half of the movement.", "Dropping down fast instead of lowering slowly."],
+    safety: [
+      "If you can't do one yet, use an assisted pull-up machine or a band, or practise lowering slowly from the top.",
+      "Don't jerk at the bottom — keep a little tension in your shoulders.",
+    ],
+  },
+  {
+    slug: "db-wrist-curl",
+    name: "Dumbbell Wrist Curl",
+    summary:
+      "Sitting with your forearms resting on your thighs and palms up, you curl a light dumbbell up using only your wrists. It strengthens the inside of your forearms and your grip.",
+    kind: "reps",
+    primaryMuscles: ["Forearms"],
+    secondaryMuscles: [],
+    equipment: ["Dumbbells", "Bench"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Sit on the end of a bench with your forearms resting on your thighs, palms facing up, and your wrists just past your knees holding light dumbbells.",
+    steps: [
+      "Let the dumbbells lower towards the floor, bending only at the wrist.",
+      "Curl your wrists up as high as you can while your forearms stay on your thighs.",
+      "Squeeze for a moment at the top.",
+      "Lower slowly back down, then repeat.",
+    ],
+    breathing: "Breathe steadily — exhale as you curl up.",
+    mistakes: ["Lifting the forearms off the thighs.", "Using too much weight and jerking it.", "Rushing through tiny half reps."],
+    safety: ["Start very light — wrist tendons need time to get used to the work.", "Stop if you feel sharp pain in the wrist."],
+  },
+  {
+    slug: "db-reverse-wrist-curl",
+    name: "Reverse Wrist Curl",
+    summary:
+      "Like the wrist curl, but with your palms facing down — you lift the backs of your hands up. It works the top of your forearms, which balances out the grip muscles and helps protect your elbows.",
+    kind: "reps",
+    primaryMuscles: ["Forearms"],
+    secondaryMuscles: [],
+    equipment: ["Dumbbells", "Bench"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Sit on the end of a bench with your forearms on your thighs, palms facing down, and your hands just past your knees holding light dumbbells.",
+    steps: [
+      "Let your hands drop down slowly, bending only at the wrist.",
+      "Lift the backs of your hands up as high as they go.",
+      "Pause for a moment at the top.",
+      "Lower with control, then repeat.",
+    ],
+    breathing: "Breathe steadily — exhale as you lift.",
+    mistakes: ["Lifting the forearms off the thighs.", "Going too heavy — these muscles are small.", "Bouncing the weight at the bottom."],
+    safety: ["Use lighter dumbbells than for the palms-up version.", "Stop if you feel sharp pain in the wrist or elbow."],
+  },
+  {
+    slug: "farmers-carry",
+    name: "Farmer's Carry",
+    summary:
+      "You pick up a heavy dumbbell in each hand and simply walk with them, standing tall. It's one of the best grip and forearm builders, and it trains your shoulders, core and posture at the same time.",
+    kind: "time",
+    primaryMuscles: ["Forearms", "Upper traps"],
+    secondaryMuscles: ["Core", "Glutes", "Shoulders"],
+    equipment: ["Heavy dumbbells or kettlebells"],
+    difficulty: "beginner",
+    usesWeight: true,
+    startingPosition:
+      "Stand tall between two heavy dumbbells. Squat down with a flat back, grip them firmly and stand up with them at your sides.",
+    steps: [
+      "Stand tall with your shoulders back and down and your core braced.",
+      "Walk forward with short, steady steps, keeping the weights still at your sides.",
+      "Keep your grip tight and don't let your shoulders shrug up or lean to one side.",
+      "When the time is up, stop, squat down and set the weights down with a flat back.",
+    ],
+    breathing: "Breathe steadily through your nose — don't hold your breath.",
+    mistakes: ["Letting the shoulders round forward.", "Leaning to one side.", "Rushing with long, wobbly steps."],
+    safety: ["Pick up and put down the weights with a flat back, like a deadlift.", "Make sure your walking path is clear."],
+  },
+  {
+    slug: "db-walking-lunge",
+    name: "Dumbbell Walking Lunge",
+    summary:
+      "Holding a dumbbell in each hand, you take a big step forward and lower until your back knee nearly touches the floor, then stand up and step straight into the next lunge with the other leg. You travel forward as you go — it works your glutes and the front of your thighs, and trains your balance.",
+    kind: "reps",
+    primaryMuscles: ["Glutes", "Quadriceps"],
+    secondaryMuscles: ["Hamstrings", "Adductors", "Calves", "Core"],
+    equipment: ["Dumbbells", "Clear walking space"],
+    difficulty: "intermediate",
+    usesWeight: true,
+    startingPosition:
+      "Stand tall with a dumbbell in each hand at your sides, feet hip-width apart, with a clear path of at least ten big steps in front of you.",
+    steps: [
+      "Take a long step forward with one leg and plant the whole foot.",
+      "Bend both knees and lower straight down until your back knee is just above the floor and your front thigh is about level with it.",
+      "Keep your chest up and your front knee in line with the middle of your foot.",
+      "Push through your front heel to stand up, bring the back foot forward and step straight into the next lunge with the other leg.",
+    ],
+    breathing: "Inhale as you lower, exhale as you push back up.",
+    mistakes: [
+      "Taking short steps, so the front knee travels far past the toes.",
+      "Leaning the upper body forward over the front leg.",
+      "Letting the front knee cave inward.",
+      "Dropping the back knee onto the floor.",
+    ],
+    safety: ["Start with light dumbbells, or none, until your balance feels steady.", "Make sure the floor in front of you is clear and not slippery."],
+  },
 ];
 
 export const EXERCISE_NAMESPACE = "steadyset-exercise";
@@ -587,7 +779,7 @@ export function muscleGroupOf(ex: Exercise): string[] {
   const all = [...ex.primaryMuscles, ...ex.secondaryMuscles].join(" ").toLowerCase();
   const groups: string[] = [];
   if (all.includes("glute")) groups.push("Glutes");
-  if (/quad|hamstring|adductor|legs|hip stab/.test(all)) groups.push("Legs");
+  if (/quad|hamstring|adductor|legs|hip stab|calves/.test(all)) groups.push("Legs");
   if (all.includes("chest")) groups.push("Chest");
   if (/back|lats/.test(all)) groups.push("Back");
   if (/shoulder|traps/.test(all)) groups.push("Shoulders");

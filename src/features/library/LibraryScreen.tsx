@@ -11,6 +11,8 @@ import { Badge, Button, EmptyState, Field, PageHeader, Segmented, Switch } from 
 import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { ExerciseDemo } from "../animation/ExerciseDemo";
+import { MuscleMap } from "@/components/ui/MuscleMap";
+import { muscleTargets } from "@/lib/data/muscles";
 import { useExercises } from "../common";
 import { filterExercises, SearchAndFilter } from "../plans/ExercisePicker";
 
@@ -85,7 +87,7 @@ export function ExerciseDetailScreen() {
         <Icon name="chevronLeft" size={16} /> Library
       </Link>
       <div className="grid lg:grid-cols-[1.1fr_1fr] gap-6 items-start">
-        <div className="lg:sticky lg:top-6">
+        <div className="lg:sticky lg:top-24">
           <ExerciseDemo animation={e.animation} name={e.name} />
         </div>
         <div className="space-y-5">
@@ -98,22 +100,18 @@ export function ExerciseDetailScreen() {
               ))}
             </div>
           </header>
-          <dl className="grid grid-cols-2 gap-3">
-            <div className="card p-3">
-              <dt className="text-sm text-muted">Main muscles</dt>
-              <dd className="font-semibold">{e.primaryMuscles.join(", ")}</dd>
-            </div>
-            <div className="card p-3">
-              <dt className="text-sm text-muted">Also works</dt>
-              <dd className="font-semibold">{e.secondaryMuscles.join(", ") || "—"}</dd>
-            </div>
-          </dl>
           {e.summary && (
             <section>
               <h2 className="text-lg mb-1">What it is</h2>
               <p className="text-[17px] leading-relaxed">{e.summary}</p>
             </section>
           )}
+          <section className="card p-4" aria-labelledby="mm-h">
+            <h2 id="mm-h" className="text-lg mb-2">
+              Muscles worked
+            </h2>
+            <MuscleMap {...muscleTargets(e)} />
+          </section>
           {e.startingPosition && (
             <section>
               <h2 className="text-lg mb-1">Starting position</h2>

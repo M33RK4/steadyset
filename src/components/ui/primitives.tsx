@@ -218,7 +218,8 @@ export function Segmented<T extends string | number>({
   size?: "sm" | "md";
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap p-1 rounded-btn bg-raised border border-line gap-1 [[data-theme=summit]_&]:border-2 [[data-theme=summit]_&]:border-edge">
+    // each option is its own pill: faded when it can be picked, solid when it's the chosen one
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
       {options.map((o) => (
         <button
           key={String(o.value)}
@@ -227,11 +228,12 @@ export function Segmented<T extends string | number>({
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
           className={cx(
-            "rounded-[max(calc(var(--r-btn)-4px),4px)] font-bold transition-colors duration-150",
-            size === "sm" ? "px-2.5 h-8 text-sm" : "px-3.5 h-9 text-[15px]",
-            o.value === value ? "bg-accent text-accent-ink" : "text-muted hover:text-ink",
+            "inline-flex items-center gap-1.5 rounded-btn font-bold transition-colors duration-150 border-2",
+            size === "sm" ? "px-3 h-9 text-sm" : "px-4 h-10 text-[15px]",
+            o.value === value ? "bg-accent text-accent-ink border-accent" : "bg-accent-soft text-accent-text border-transparent hover:border-accent/40",
           )}
         >
+          {o.value === value && <Icon name="check" size={16} strokeWidth={2.6} />}
           {o.label}
         </button>
       ))}
