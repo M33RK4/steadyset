@@ -18,8 +18,8 @@ export const THEMES: ThemeInfo[] = [
   {
     id: "summit",
     name: "Summit",
-    description: "Pine green, sand and brass, with mountain ridges",
-    swatch: { light: ["#ece7da", "#2f5d46", "#1c2a22"], dark: ["#0f1712", "#e0a54a", "#e9eadf"] },
+    description: "Charcoal, warm stone and sunset orange, with mountain ridges",
+    swatch: { light: ["#efe9e1", "#c94f16", "#1f2328"], dark: ["#111316", "#ff8a3d", "#eee9e3"] },
   },
 ];
 

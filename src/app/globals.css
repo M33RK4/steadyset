@@ -146,24 +146,24 @@
 }
 
 /* ================================================================ Summit — light
-   Sand paper, pine green and brass. Bold grotesk type, solid edges and hard shadows,
+   Warm stone, charcoal and sunset orange. Bold grotesk type, solid edges and hard shadows,
    like a trail map. */
 [data-theme="summit"] {
   color-scheme: light;
-  --bg: #ece7da;
-  --bg-glow: #e3dcc9;
-  --surface: #f9f6ee;
-  --raised: #f1ece0;
-  --ink: #1c2a22;
-  --muted: #5c695f;
-  --line: #d3cab4;
-  --edge: #1c2a22;
-  --accent: #2f5d46;
-  --accent-ink: #f7f2e4;
-  --accent-soft: #dbe5d5;
-  --accent-text: #2a5640;
-  --pop: #d4862a;
-  --heart: #d4862a;
+  --bg: #efe9e1;
+  --bg-glow: #e7ded2;
+  --surface: #fbf8f4;
+  --raised: #f4eee7;
+  --ink: #1f2328;
+  --muted: #655f59;
+  --line: #d9cfc3;
+  --edge: #1f2328;
+  --accent: #c94f16;
+  --accent-ink: #fff8f1;
+  --accent-soft: #fbe2d2;
+  --accent-text: #b2440f;
+  --pop: #f08a24;
+  --heart: #e8641c;
   --done: #2f7d4f;
   --done-soft: #dcebd9;
   --partial: #a9650f;
@@ -171,11 +171,11 @@
   --danger: #b23a2a;
   --danger-soft: #f5ddd6;
 
-  --ridge-far: #b9c4a6;
-  --ridge-mid: #6e9071;
-  --ridge-near: #2f5d46;
-  --sun: #d4862a;
-  --topo: #1c2a22;
+  --ridge-far: #dccbbb;
+  --ridge-mid: #8e8f98;
+  --ridge-near: #2d3138;
+  --sun: #f08a24;
+  --topo: #1f2328;
 
   --display-font: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --body-font: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
@@ -191,38 +191,38 @@
   --btn-border: 2px solid var(--edge);
   --btn-shadow: 3px 3px 0 var(--edge);
   --btn-press: translate(2px, 2px);
-  --hero: linear-gradient(180deg, #f7f1e1 0%, #f3ecda 100%);
-  --dock: rgb(249 246 238 / 0.94);
-  --fig-line: #1c2a22;
-  --fig-skin: #93a38a; --fig-skin-far: #bcc7b2; --fig-skin-shade: #76876d; --fig-hair: #1c2a22;
-  --fig-shirt: #2f5d46; --fig-shirt-far: #6e9071; --fig-shirt-shade: #244a37;
-  --fig-shorts: #1c2a22; --fig-shorts-far: #4c5b50; --fig-shoe: #f9f6ee; --fig-shoe-far: #dcd5c2; --fig-sole: #d4862a;
-  --fig-metal: #a9b2a4; --fig-metal-dark: #6f7a6b; --fig-metal-light: #e3e7de;
-  --fig-pad: #1c2a22; --fig-pad-light: #3f5546; --fig-plate: #3a4a3f; --fig-plate-dark: #26332b; --fig-plate-light: #6b8070;
-  --fig-cable: #5c695f; --fig-rubber: #1c2a22; --fig-mat: #d6ccb3; --fig-mat-line: #c2b597;
-  --fig-floor: #e2dbc8; --fig-floor-line: #cfc6b0; --fig-wall: #f3efe4; --fig-screen: #cfe0c8;
-  --fig-muscle: #e8622c; --fig-shadow: rgb(28 42 34 / 0.18);
-  --fig-lips: #b07a6c; --fig-stripe: #d4862a; --fig-sock: #f9f6ee; --fig-mirror: #e9e4d6;
+  --hero: linear-gradient(180deg, #fbf3ea 0%, #f6ece0 100%);
+  --dock: rgb(251 248 244 / 0.94);
+  --fig-line: #1f2328;
+  --fig-skin: #a7aeb6; --fig-skin-far: #c9ced4; --fig-skin-shade: #88919b; --fig-hair: #1f2328;
+  --fig-shirt: #e0662a; --fig-shirt-far: #f0a67c; --fig-shirt-shade: #b94f1b;
+  --fig-shorts: #2d3138; --fig-shorts-far: #5a5f68; --fig-shoe: #fbf8f4; --fig-shoe-far: #dcd3c8; --fig-sole: #f08a24;
+  --fig-metal: #aeb4bb; --fig-metal-dark: #717880; --fig-metal-light: #e4e7ea;
+  --fig-pad: #22262c; --fig-pad-light: #434951; --fig-plate: #3b4048; --fig-plate-dark: #272b31; --fig-plate-light: #6c727b;
+  --fig-cable: #655f59; --fig-rubber: #1f2328; --fig-mat: #ddd2c4; --fig-mat-line: #c9bba9;
+  --fig-floor: #e6ddd2; --fig-floor-line: #d3c7b9; --fig-wall: #f6f1eb; --fig-screen: #f6d4bb;
+  --fig-muscle: #e0313f; --fig-shadow: rgb(31 35 40 / 0.18);
+  --fig-lips: #b07a6c; --fig-stripe: #f08a24; --fig-sock: #fbf8f4; --fig-mirror: #ece5dc;
 }
 
 /* ================================================================ Summit — dark
-   Night forest with a brass moon. */
+   Charcoal night with an orange sunset glow. */
 [data-theme="summit"][data-mode="dark"] {
   color-scheme: dark;
-  --bg: #0e1511;
-  --bg-glow: #142019;
-  --surface: #16201a;
-  --raised: #1c2821;
-  --ink: #ebe8dc;
-  --muted: #9aa79b;
-  --line: #2b3a30;
-  --edge: #3d5244;
-  --accent: #e0a54a;
-  --accent-ink: #17110a;
-  --accent-soft: #382a13;
-  --accent-text: #efb861;
-  --pop: #e0a54a;
-  --heart: #e0a54a;
+  --bg: #111316;
+  --bg-glow: #17191d;
+  --surface: #1a1d21;
+  --raised: #212429;
+  --ink: #eee9e3;
+  --muted: #a39b93;
+  --line: #2f333a;
+  --edge: #464c55;
+  --accent: #ff8a3d;
+  --accent-ink: #1a0e05;
+  --accent-soft: #3b2414;
+  --accent-text: #ffa261;
+  --pop: #ff8a3d;
+  --heart: #ff8a3d;
   --done: #72cf92;
   --done-soft: #163222;
   --partial: #f0b955;
@@ -230,29 +230,36 @@
   --danger: #ff7f6e;
   --danger-soft: #3e1d18;
 
-  --ridge-far: #22362a;
-  --ridge-mid: #2c4637;
-  --ridge-near: #3c5d48;
-  --sun: #e9dcae;
-  --topo: #e9eadf;
+  --ridge-far: #24272d;
+  --ridge-mid: #30343b;
+  --ridge-near: #454b55;
+  --sun: #ff9d55;
+  --topo: #eee9e3;
 
-  --shadow: 4px 4px 0 #050806;
-  --btn-shadow: 3px 3px 0 #050806;
-  --hero: linear-gradient(180deg, #1b2a21 0%, #16201a 100%);
-  --dock: rgb(22 32 26 / 0.94);
-  --fig-line: #040705;
-  --fig-skin: #a8b89f; --fig-skin-far: #6d7d66; --fig-skin-shade: #8a9b82; --fig-hair: #3b5244;
-  --fig-shirt: #e0a54a; --fig-shirt-far: #9c7333; --fig-shirt-shade: #c48d36;
-  --fig-shorts: #3f6a50; --fig-shorts-far: #2c4a38; --fig-shoe: #ebe8dc; --fig-shoe-far: #9aa79b; --fig-sole: #e0a54a;
-  --fig-metal: #586b5e; --fig-metal-dark: #3a4a3f; --fig-metal-light: #8a9e8f;
-  --fig-pad: #0a100c; --fig-pad-light: #2b3d31; --fig-plate: #2f4236; --fig-plate-dark: #1f2c24; --fig-plate-light: #536a5a;
-  --fig-cable: #9aa79b; --fig-rubber: #040705; --fig-mat: #22332a; --fig-mat-line: #2f4538;
-  --fig-floor: #18231c; --fig-floor-line: #263529; --fig-wall: #1c2821; --fig-screen: #3e6a50;
+  --shadow: 4px 4px 0 #050506;
+  --btn-shadow: 3px 3px 0 #050506;
+  --hero: linear-gradient(180deg, #241b15 0%, #1a1d21 100%);
+  --dock: rgb(26 29 33 / 0.94);
+  --fig-line: #050506;
+  --fig-skin: #b3bac2; --fig-skin-far: #6f767e; --fig-skin-shade: #959da6; --fig-hair: #454b55;
+  --fig-shirt: #ff8a3d; --fig-shirt-far: #a65a27; --fig-shirt-shade: #d9712f;
+  --fig-shorts: #454b55; --fig-shorts-far: #30343b; --fig-shoe: #eee9e3; --fig-shoe-far: #a39b93; --fig-sole: #ff8a3d;
+  --fig-metal: #5d636b; --fig-metal-dark: #3d4148; --fig-metal-light: #8f969f;
+  --fig-pad: #0b0c0e; --fig-pad-light: #2c3036; --fig-plate: #33373e; --fig-plate-dark: #22252a; --fig-plate-light: #5a6068;
+  --fig-cable: #a39b93; --fig-rubber: #050506; --fig-mat: #262a30; --fig-mat-line: #33383f;
+  --fig-floor: #1a1d21; --fig-floor-line: #272b30; --fig-wall: #1f2226; --fig-screen: #5a3a24;
   --fig-muscle: #ff4d5a; --fig-shadow: rgb(0 0 0 / 0.42);
-  --fig-lips: #b98c80; --fig-stripe: #e0a54a; --fig-sock: #ebe8dc; --fig-mirror: #212f27;
+  --fig-lips: #b98c80; --fig-stripe: #ff8a3d; --fig-sock: #eee9e3; --fig-mirror: #24272c;
 }
 
 @layer base {
+  html,
+  body {
+    /* Nothing may stick out sideways (a screen sliding in, a wide card): on phones that would
+       zoom the page out for a moment and make the bottom tab bar jump. "clip", not "hidden",
+       so sticky bars keep working. */
+    overflow-x: clip;
+  }
   html {
     background: var(--bg);
     -webkit-tap-highlight-color: transparent;

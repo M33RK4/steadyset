@@ -30,7 +30,7 @@ export function GlassIndicator({ activeKey, className }: { activeKey: string | n
       el.style.width = `${r.w}px`;
       el.style.height = `${r.h}px`;
       // a liquid squash while moving: a little wider and flatter mid-way
-      el.style.transform = `translate(${r.x}px, ${r.y}px) scale(${1 + squish * 0.06}, ${1 - squish * 0.1})`;
+      el.style.transform = `translate(${r.x}px, ${r.y}px) scale(${1 + squish * 0.05}, ${1 - squish * 0.035})`;
     };
     const first = target();
     if (!first) {
