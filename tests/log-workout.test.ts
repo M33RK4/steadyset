@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { seededData, apply } from "./helpers";
-import { deleteSession, finishSet, logWorkout, sessionExercisesOf, setsOf, startSession } from "../src/lib/session/sessionOps";
+import { deleteSession, finishSession, finishSet, logWorkout, sessionExercisesOf, setsOf, startSession } from "../src/lib/session/sessionOps";
 import { activePlan, dayForWeekday, exercisesOfDay, planSlotFor, saveSessionAsPlanDay } from "../src/lib/plans/planOps";
 import { buildDay, makeContext } from "../src/lib/calendar/calendar";
 import { exerciseIdBySlug } from "../src/lib/data/exercises";
@@ -72,4 +72,39 @@ test("deleting a workout removes it and its sets, so the day is no longer done",
   assert.equal(d.sessionExercises.length, 0);
   assert.equal(d.sets.length, 0);
   assert.equal(buildDay(makeContext(d, "2026-10-29"), "2026-10-26").sessions.length, 0);
+});
+
+test("editing a finished workout replaces its sets and keeps its plan link", () => {
+  const { data, planId } = seededData();
+  const plan = data.plans.find((p) => p.id === planId)!;
+  const day = dayForWeekday(data, planId, 1)!;
+  const r = startSession(data, { plan, day, date: "2026-10-26", now: new Date(2026, 9, 26, 18) });
+  let d = apply(data, r.changes);
+  const se = sessionExercisesOf(d, r.sessionId)[0];
+  d = apply(d, finishSet(d, r.active, { seId: se.id, expectedSetNumber: 1, reps: 10, weight: 5, units: "kg", now: new Date(2026, 9, 26, 18, 5) }).changes);
+  d = apply(d, finishSession(d, r.sessionId, { now: new Date(2026, 9, 26, 18, 40) }));
+  const before = d.sessions.find((s) => s.id === r.sessionId)!;
+  // fix the reps and weight of that set and add a second one
+  const e = logWorkout(d, {
+    sessionId: r.sessionId,
+    date: "2026-10-26",
+    title: before.title,
+    minutes: 40,
+    notes: "fixed",
+    units: "kg",
+    now,
+    items: [{ exerciseId: se.exerciseId!, sets: [{ reps: 12, weight: 6 }, { reps: 10, weight: 6 }] }],
+  });
+  assert.equal(e.sessionId, r.sessionId);
+  d = apply(d, e.changes);
+  const after = d.sessions.find((s) => s.id === r.sessionId)!;
+  assert.equal(d.sessions.length, 1);
+  assert.equal(after.planDayId, day.id);
+  assert.equal(after.endedAt, before.endedAt);
+  assert.equal(after.notes, "fixed");
+  const list = sessionExercisesOf(d, r.sessionId);
+  assert.equal(list.length, 1);
+  assert.deepEqual(setsOf(d, list[0].id).map((x) => [x.reps, x.weight]), [[12, 6], [10, 6]]);
+  // the old exercise rows and sets are gone
+  assert.equal(d.sets.length, 2);
 });

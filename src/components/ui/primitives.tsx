@@ -18,10 +18,11 @@ const variants: Record<Variant, string> = {
   danger: "btn bg-danger text-white hover:brightness-110 [--btn-shadow:none]",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm gap-1.5",
-  md: "h-11 px-4 text-[15px] gap-2",
-  lg: "h-13 px-5 text-base gap-2",
-  xl: "h-16 px-6 text-lg gap-2.5",
+  sm: "h-9 px-3 text-sm gap-1.5 whitespace-nowrap",
+  md: "h-11 px-4 text-[15px] gap-2 whitespace-nowrap",
+  lg: "h-13 px-5 text-base gap-2 whitespace-nowrap",
+  // big buttons can carry long names ("Start Incline Chest Press Machine"): they wrap instead of overflowing
+  xl: "min-h-16 py-3 px-6 text-lg gap-2.5 text-left leading-tight [&>svg]:shrink-0",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -44,7 +45,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cx(
-        "inline-flex items-center justify-center rounded-btn font-bold whitespace-nowrap select-none transition-[filter,background-color,transform,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center max-w-full rounded-btn font-bold select-none transition-[filter,background-color,transform,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         block && "w-full",

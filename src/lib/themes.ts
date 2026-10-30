@@ -42,6 +42,7 @@ export function normalizePreferences(p: Preferences): Preferences {
     ...p,
     theme: isTheme(p.theme) ? p.theme : "lily",
     colorMode: isMode(p.colorMode) ? p.colorMode : "system",
+    bodyType: p.bodyType === "male" ? "male" : "female",
   };
 }
 

@@ -31,7 +31,7 @@ test("every built-in exercise has its own animation and a muscle map", () => {
 
 test("the new exercises are in the library", () => {
   const slugs = new Set(BUILT_IN_EXERCISES.map((e) => e.slug));
-  for (const s of ["leg-extension", "lying-leg-curl", "preacher-curl", "chin-up", "db-wrist-curl", "db-reverse-wrist-curl", "farmers-carry", "db-walking-lunge", "cable-rope-hammer-curl", "crunch", "decline-sit-up", "russian-twist"]) assert.ok(slugs.has(s), s);
+  for (const s of ["leg-extension", "lying-leg-curl", "preacher-curl", "chin-up", "db-wrist-curl", "db-reverse-wrist-curl", "farmers-carry", "db-walking-lunge", "cable-rope-hammer-curl", "crunch", "decline-sit-up", "russian-twist", "db-standing-calf-raise", "db-seated-calf-raise"]) assert.ok(slugs.has(s), s);
   assert.equal(new Set(BUILT_IN_EXERCISES.map((e) => e.id)).size, BUILT_IN_EXERCISES.length, "ids are unique");
 });
 

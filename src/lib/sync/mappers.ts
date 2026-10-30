@@ -150,6 +150,7 @@ const PREF_COLUMNS: Record<keyof Preferences, string> = {
   showMissed: "show_missed",
   trackedMetrics: "tracked_metrics",
   displayName: "display_name",
+  bodyType: "body_type",
   defaultPlanSeeded: "default_plan_seeded",
   updatedAt: "updated_at",
 };

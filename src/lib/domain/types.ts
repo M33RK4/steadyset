@@ -160,6 +160,9 @@ export interface BodyMeasurement {
   measuredOn: LocalDate;
 }
 
+/** Which body the muscle map shows. */
+export type BodyType = "male" | "female";
+
 export interface Preferences {
   theme: ThemeId;
   colorMode: ColorMode;
@@ -174,6 +177,7 @@ export interface Preferences {
   showMissed: boolean;
   trackedMetrics: string[];
   displayName: string;
+  bodyType: BodyType;
   /** Set once the default plan has been copied in, so deleting it doesn't make it reappear. */
   defaultPlanSeeded: boolean;
   updatedAt: string;
@@ -218,6 +222,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showMissed: false,
   trackedMetrics: [],
   displayName: "",
+  bodyType: "female",
   defaultPlanSeeded: false,
   updatedAt: new Date(0).toISOString(),
 };

@@ -156,7 +156,7 @@ function ActiveWorkout() {
         </Link>
         <div className="flex-1 min-w-0">
           <p className="eyebrow">Workout in progress</p>
-          <h1 className="text-3xl md:text-4xl truncate mt-1">{session.title}</h1>
+          <h1 className="text-3xl md:text-4xl break-words mt-1">{session.title}</h1>
           <p className="text-sm text-muted flex flex-wrap gap-x-3">
             <span className="num">{formatClock(elapsed)} elapsed</span>
             <span>

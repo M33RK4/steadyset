@@ -114,6 +114,13 @@ export function SettingsScreen() {
             <span className="font-medium">Weight units</span>
             <Segmented label="Weight units" value={prefs.units} onChange={(u) => setPrefs({ units: u })} options={[{ value: "kg", label: "Kilograms" }, { value: "lb", label: "Pounds" }]} />
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              <span className="font-semibold block">Muscle map body</span>
+              <span className="text-sm text-muted">The body shown on each exercise's muscle map.</span>
+            </span>
+            <Segmented label="Muscle map body" value={prefs.bodyType} onChange={(v) => setPrefs({ bodyType: v })} options={[{ value: "female", label: "Female" }, { value: "male", label: "Male" }]} />
+          </div>
           <div className="space-y-2">
             <p className="font-medium">Default rest timer</p>
             <p className="text-sm text-muted">Used for exercises you add yourself. Each exercise in a plan can have its own rest time.</p>

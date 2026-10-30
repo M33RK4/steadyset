@@ -5,7 +5,7 @@ import { useApp } from "@/lib/store/AppStore";
 import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Button, Field, IconButton } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
-import { logWorkout } from "@/lib/session/sessionOps";
+import { isTimed, logWorkout, sessionExercisesOf, setsOf } from "@/lib/session/sessionOps";
 import { isCycle, planSlotFor, saveSessionAsPlanDay } from "@/lib/plans/planOps";
 import type { LocalDate } from "@/lib/domain/types";
 import { formatLongDate, WEEKDAY_NAMES, weekdayOf } from "@/lib/util/dates";
@@ -25,8 +25,9 @@ const digits = (s: string) => s.replace(/[^0-9.]/g, "");
 /**
  * Log a workout that was done without starting it in the app: pick the exercises, type in the
  * sets, save. Then offers to make it the plan's workout for that weekday (or cycle day).
+ * With `sessionId` it edits a finished workout instead, starting from what was recorded.
  */
-export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: boolean; onClose: () => void; date: LocalDate }) {
+export function LogWorkoutDialog({ open, onClose, date: initialDate, sessionId }: { open: boolean; onClose: () => void; date: LocalDate; sessionId?: string }) {
   const { data, prefs, commit } = useApp();
   const ex = useExercises();
   const toast = useToast();
@@ -40,14 +41,38 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: b
   const [picking, setPicking] = useState(false);
   const [nextKey, setNextKey] = useState(1);
 
+  const editing = sessionId ? data.sessions.find((x) => x.id === sessionId) : undefined;
   useEffect(() => {
     if (!open) return;
+    if (editing) {
+      // start from what was recorded
+      const fmt = (n: number | null) => (n === null ? "" : String(n));
+      setDate(editing.localDate);
+      setTitle(editing.title);
+      setMinutes(String(Math.max(1, Math.round((editing.durationSeconds ?? 2700) / 60))));
+      setNotes(editing.notes);
+      const loaded = sessionExercisesOf(data, editing.id)
+        .filter((e) => e.exerciseId && ex.get(e.exerciseId))
+        .map((e, i): Row => {
+          const sets = setsOf(data, e.id);
+          return {
+            key: i + 1,
+            exerciseId: e.exerciseId!,
+            minutes: isTimed(e) ? fmt(e.durationSeconds ? Math.round(e.durationSeconds / 60) : null) : "",
+            sets: sets.length ? sets.map((x) => ({ reps: fmt(e.targetUnit === "seconds" ? x.durationSeconds : x.reps), weight: fmt(x.weight) })) : [{ reps: "", weight: "" }],
+          };
+        });
+      setRows(loaded);
+      setNextKey(loaded.length + 1);
+      return;
+    }
     setDate(initialDate);
     setTitle("");
     setMinutes("45");
     setNotes("");
     setRows([]);
-  }, [open, initialDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once each time the dialog opens
+  }, [open, initialDate, sessionId]);
 
   const m = Number(minutes);
   const validMinutes = Number.isFinite(m) && m > 0 && m <= 600;
@@ -68,6 +93,7 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: b
       notes,
       units: prefs.units,
       now: new Date(),
+      sessionId: editing?.id,
       items: filled.map((row) => ({
         exerciseId: row.exerciseId,
         minutes: num(row.minutes),
@@ -76,6 +102,10 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: b
     });
     commit(r.changes);
     onClose();
+    if (editing) {
+      toast("Workout updated", { tone: "success" });
+      return;
+    }
     toast(`${name} logged`, { tone: "success" });
 
     const slot = planSlotFor(data, date);
@@ -101,8 +131,8 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: b
       <Dialog
         open={open && !picking}
         onClose={onClose}
-        title="Log a workout"
-        description="For a workout you did without starting it here. No plan needed."
+        title={editing ? "Edit workout" : "Log a workout"}
+        description={editing ? "Fix reps or weights, add or remove sets and exercises." : "For a workout you did without starting it here. No plan needed."}
         size="lg"
         footer={
           <>
@@ -110,7 +140,7 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate }: { open: b
               Cancel
             </Button>
             <Button onClick={save} disabled={!valid} icon="check">
-              Save workout
+              {editing ? "Save changes" : "Save workout"}
             </Button>
           </>
         }

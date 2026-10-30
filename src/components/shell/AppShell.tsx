@@ -15,6 +15,7 @@ import { formatClock } from "@/lib/util/dates";
 import { liveOf, useBuddies } from "@/features/buddies/BuddiesProvider";
 import { ReminderWatcher } from "./ReminderWatcher";
 import { useServiceWorker } from "@/lib/pwa/install";
+import { GlassIndicator } from "./GlassIndicator";
 
 const NAV: { href: string; label: string; short: string; icon: IconName; dock: boolean }[] = [
   { href: "/", label: "Today", short: "Today", icon: "home", dock: true },
@@ -25,6 +26,9 @@ const NAV: { href: string; label: string; short: string; icon: IconName; dock: b
   { href: "/buddies", label: "Buddies", short: "Buddies", icon: "users", dock: true },
 ];
 
+/** Tab of the screen shown last, so the next screen can slide in from the side of the tab tapped. */
+let lastTab = -1;
+
 function isActive(path: string, href: string) {
   return href === "/" ? path === "/" : path === href || path.startsWith(href + "/");
 }
@@ -33,6 +37,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname() ?? "/";
   const { mode, configured, ready } = useApp();
   useServiceWorker();
+  const activeTab = NAV.find((n) => isActive(path, n.href))?.href ?? null;
+  const tabIndex = NAV.findIndex((n) => n.href === activeTab);
+  // A different tab glides in from its side; anything else (sub-pages, first load) just rises in.
+  // Decided once per screen, so a later re-render doesn't swap the class and replay it.
+  const anim = useRef<{ path: string; cls: string } | null>(null);
+  if (anim.current?.path !== path) {
+    anim.current = { path, cls: tabIndex >= 0 && lastTab >= 0 && tabIndex !== lastTab ? (tabIndex > lastTab ? "page-from-right" : "page-from-left") : "anim-page" };
+  }
+  const pageAnim = anim.current.cls;
+  useEffect(() => {
+    lastTab = tabIndex;
+  }, [tabIndex]);
   const bare = path.startsWith("/auth");
   if (bare)
     return (
@@ -59,11 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <BrandMark />
             <span className="brand text-2xl leading-none">Steadyset</span>
           </Link>
-          <nav aria-label="Main" className="hidden lg:flex items-center gap-1 mr-auto">
-            {NAV.map((n) => (
-              <NavLink key={n.href} href={n.href} active={isActive(path, n.href)} icon={n.icon} label={n.label} />
-            ))}
-          </nav>
+          <DesktopNav path={path} active={activeTab} />
           <SyncDot />
           <ModeToggle />
           <ThemeQuickSwitch />
@@ -85,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main id="main" className={cx("flex-1 w-full mx-auto px-4 md:px-8 pt-6 md:pt-10", inWorkout ? "max-w-3xl pb-12" : "max-w-6xl pb-32 lg:pb-16")}>
         {ready ? (
-          <div key={path} className="anim-page">
+          <div key={path} className={pageAnim}>
             {children}
           </div>
         ) : (
@@ -95,29 +107,49 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Phones & tablets: a floating dock; the current page's pill grows to show its name */}
       {!inWorkout && (
-        <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
-          <ul className="dock mx-auto max-w-md rounded-card flex items-center justify-between p-1.5">
-            {NAV.filter((n) => n.dock).map((n) => {
-              const on = isActive(path, n.href);
-              return (
-                <li key={n.href} className={cx("transition-[flex-grow] duration-300", on ? "grow-[2.2]" : "grow")}>
-                  <Link
-                    href={n.href}
-                    aria-current={on ? "page" : undefined}
-                    aria-label={n.label}
-                    className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors", on ? "bg-accent text-accent-ink px-3" : "text-muted hover:text-ink")}
-                  >
-                    <Icon name={n.icon} size={21} />
-                    {on && <span className="truncate">{n.short}</span>}
-                    {n.href === "/buddies" && <BuddyLiveDot />}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <MobileDock path={path} active={activeTab} />
       )}
     </div>
+  );
+}
+
+/** Phones & tablets: a floating dock; the current tab grows to show its name under a sliding glass pill. */
+function MobileDock({ path, active }: { path: string; active: string | null }) {
+  const docked = NAV.some((n) => n.dock && n.href === active) ? active : null;
+  return (
+    <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <ul className="dock relative mx-auto max-w-md rounded-card flex items-center justify-between p-1.5">
+        <GlassIndicator activeKey={docked} className="rounded-btn" />
+        {NAV.filter((n) => n.dock).map((n) => {
+          const on = isActive(path, n.href);
+          return (
+            <li key={n.href} data-glass={n.href} className={cx("relative transition-[flex-grow] duration-300 ease-[cubic-bezier(0.3,1.2,0.4,1)]", on ? "grow-[2.2]" : "grow")}>
+              <Link
+                href={n.href}
+                aria-current={on ? "page" : undefined}
+                aria-label={n.label}
+                className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors duration-300", on ? "text-accent-ink px-3" : "text-muted hover:text-ink")}
+              >
+                <Icon name={n.icon} size={21} />
+                {on && <span className="truncate anim-label">{n.short}</span>}
+                {n.href === "/buddies" && <BuddyLiveDot />}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function DesktopNav({ path, active }: { path: string; active: string | null }) {
+  return (
+    <nav aria-label="Main" className="hidden lg:flex relative items-center gap-1 mr-auto">
+      <GlassIndicator activeKey={active} className="rounded-btn" />
+      {NAV.map((n) => (
+        <NavLink key={n.href} href={n.href} active={isActive(path, n.href)} icon={n.icon} label={n.label} />
+      ))}
+    </nav>
   );
 }
 
@@ -125,8 +157,9 @@ function NavLink({ href, active, icon, label }: { href: string; active: boolean;
   return (
     <Link
       href={href}
+      data-glass={href}
       aria-current={active ? "page" : undefined}
-      className={cx("relative flex items-center gap-2 rounded-btn px-3.5 h-10 font-bold text-[14px] transition-colors", active ? "bg-accent text-accent-ink" : "text-muted hover:text-ink hover:bg-raised")}
+      className={cx("relative flex items-center gap-2 rounded-btn px-3.5 h-10 font-bold text-[14px] transition-colors duration-300", active ? "text-accent-ink" : "text-muted hover:text-ink hover:bg-raised")}
     >
       <Icon name={icon} size={18} />
       {label}

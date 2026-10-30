@@ -25,6 +25,7 @@ export function Dashboard() {
   const confirm = useConfirm();
   const toast = useToast();
   const [logWorkoutOpen, setLogWorkoutOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const removeSession = async (id: string) => {
     const s = data.sessions.find((x) => x.id === id);
     if (!s) return;
@@ -163,6 +164,7 @@ export function Dashboard() {
                       </p>
                     </div>
                     <Badge tone={s.status === "completed" ? "done" : "partial"}>{s.status === "completed" ? "Completed" : "Partial"}</Badge>
+                    {p.total > 0 && <IconButton icon="edit" label={`Edit ${s.title}`} size={36} className="text-muted -mr-2" onClick={() => setEditId(s.id)} />}
                     <IconButton icon="trash" label={`Delete ${s.title}`} size={36} className="text-muted" onClick={() => void removeSession(s.id)} />
                   </li>
                 );
@@ -187,6 +189,7 @@ export function Dashboard() {
       <BuddiesRow />
 
       <LogWorkoutDialog open={logWorkoutOpen} onClose={() => setLogWorkoutOpen(false)} date={today} />
+      <LogWorkoutDialog open={!!editId} onClose={() => setEditId(null)} date={today} sessionId={editId ?? undefined} />
       <LogActivityDialog open={logOpen} onClose={() => setLogOpen(false)} date={today} day={todayDay.planned} kind={todayDay.planned?.kind === "cardio" ? "cardio" : "activity"} />
     </div>
   );

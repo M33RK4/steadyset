@@ -855,6 +855,63 @@ const russianTwist: ExerciseAnimation = {
   })(),
 };
 
+/** Standing calf raise: the whole body rises onto the balls of the feet; toes stay put. */
+const standingCalfRaise: ExerciseAnimation = {
+  cycle: 2.8,
+  cue: "Standing tall with dumbbells at the sides, rise onto the balls of the feet, pause, and lower the heels slowly.",
+  frames: [
+    { t: 0, label: "Heels down" },
+    { t: 0.45, label: "Up on the toes" },
+  ],
+  at: (() => {
+    // toes stay on the floor while the ankles rise: ankle = toe - foot length along the foot
+    const toe: Pt = [112, 133];
+    const up = 52;
+    const ank: Pt = [toe[0] - 9 * Math.cos((up * Math.PI) / 180), toe[1] - 9 * Math.sin((up * Math.PI) / 180)];
+    const lift = 133 - ank[1];
+    const down: Pose = { ...STAND, hands: [[99, 118], [101, 118]], feet: [[103, 133], [103, 133]], footAngle: [0, 0] };
+    const top: Pose = { ...down, hip: [101, 74 - lift], hands: [[100, 118 - lift], [102, 118 - lift]], feet: [ank, ank], footAngle: [up, up] };
+    return side(
+      [
+        { pose: down, hold: 0.12, move: 0.3 },
+        { pose: top, hold: 0.14, move: 0.44 },
+      ],
+      (j) => ({ back: [shadow(102, 46), ...mat(70, 136)], far: dumbbell(j.grip[0], j.handAngle[0] + 90, 0.95), front: dumbbell(j.grip[1], j.handAngle[1] + 90, 0.95) }),
+      (j) => j.ankle[1],
+    );
+  })(),
+};
+
+/** Seated calf raise: dumbbells on the knees, heels lift while the balls of the feet stay down. */
+const seatedCalfRaise: ExerciseAnimation = {
+  cycle: 2.8,
+  cue: "Sitting with a dumbbell on each knee, lift the heels as high as possible, pause, and lower them slowly.",
+  frames: [
+    { t: 0, label: "Heels down" },
+    { t: 0.45, label: "Heels lifted" },
+  ],
+  at: (() => {
+    const toe: Pt = [124, 133];
+    const up = 54;
+    const ank: Pt = [toe[0] - 9 * Math.cos((up * Math.PI) / 180), toe[1] - 9 * Math.sin((up * Math.PI) / 180)];
+    const lift = 133 - ank[1];
+    const down: Pose = { hip: [86, 100], torso: [-94, -92], head: -88, hands: [[110, 92], [112, 92]], feet: [[115, 133], [115, 133]], footAngle: [0, 0] };
+    const top: Pose = { ...down, hands: [[110, 92 - lift * 0.8], [112, 92 - lift * 0.8]], feet: [ank, ank], footAngle: [up, up] };
+    return side(
+      [
+        { pose: down, hold: 0.12, move: 0.3 },
+        { pose: top, hold: 0.14, move: 0.44 },
+      ],
+      (j) => {
+        // the dumbbell rests across the top of the thigh just behind the knee
+        const bell = (i: 0 | 1) => dumbbell(add(lerpPt(j.hip, j.knee[i], 0.8), [0, -6.5]), 0, 0.95, "end");
+        return { back: [shadow(100, 80), ...bench(44, 100, 106)], far: bell(0), front: bell(1) };
+      },
+      (j) => j.ankle[1],
+    );
+  })(),
+};
+
 const deadBug: ExerciseAnimation = {
   cycle: 6,
   cue: "Back flat on the floor: one arm reaches overhead as the opposite leg straightens, then switch sides.",
@@ -1284,6 +1341,8 @@ export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "chest-supported-row": chestSupportedRow,
   "forearm-plank": plank,
   "dead-bug": deadBug,
+  "db-standing-calf-raise": standingCalfRaise,
+  "db-seated-calf-raise": seatedCalfRaise,
   crunch,
   "decline-sit-up": declineSitUp,
   "russian-twist": russianTwist,

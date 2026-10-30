@@ -347,6 +347,8 @@ function SessionDetail({ sessionId }: { sessionId: string }) {
   const list = sessionExercisesOf(data, s.id);
   const [notes, setNotes] = useState(s.notes);
   const [editing, setEditing] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const canEdit = s.status !== "in_progress" && list.length > 0;
   return (
     <div className="rounded-card border border-line p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -401,6 +403,11 @@ function SessionDetail({ sessionId }: { sessionId: string }) {
           <Button size="sm" variant="ghost" icon="note" onClick={() => setEditing(true)}>
             {s.notes ? "Edit notes" : "Add notes"}
           </Button>
+          {canEdit && (
+            <Button size="sm" variant="ghost" icon="edit" onClick={() => setEditOpen(true)}>
+              Edit
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -423,6 +430,7 @@ function SessionDetail({ sessionId }: { sessionId: string }) {
           </Button>
         </div>
       )}
+      {canEdit && <LogWorkoutDialog open={editOpen} onClose={() => setEditOpen(false)} date={s.localDate} sessionId={s.id} />}
     </div>
   );
 }

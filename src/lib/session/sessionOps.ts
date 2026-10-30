@@ -330,36 +330,45 @@ export interface LoggedExercise {
 /**
  * A workout typed in afterwards (no plan needed): recorded as a finished session with its
  * exercises and sets, so it counts in the calendar, history and progress like any other.
+ * With `sessionId` it rewrites that finished workout instead: its exercises and sets are
+ * replaced by the ones given, and its plan link is kept.
  */
 export function logWorkout(
   data: AppData,
-  args: { date: LocalDate; title: string; minutes: number; notes: string; items: LoggedExercise[]; units: Units; now: Date },
+  args: { date: LocalDate; title: string; minutes: number; notes: string; items: LoggedExercise[]; units: Units; now: Date; sessionId?: string },
 ): { changes: Change[]; sessionId: string } {
   const lookup = exerciseLookup(data);
-  const sessionId = uuid();
-  // finished now when logged for today, otherwise in the evening of that day
+  const prev = args.sessionId ? data.sessions.find((x) => x.id === args.sessionId && x.status !== "in_progress") : undefined;
+  if (args.sessionId && !prev) return { changes: [], sessionId: args.sessionId };
+  const sessionId = prev?.id ?? uuid();
+  // finished now when logged for today, otherwise in the evening of that day; an edit keeps
+  // its finishing time unless the date changed
   const today = toLocalDate(args.now);
-  const end = args.date === today ? args.now : new Date(parseLocalDate(args.date).setHours(18));
+  const end =
+    prev?.endedAt && prev.localDate === args.date ? new Date(prev.endedAt) : args.date === today ? args.now : new Date(parseLocalDate(args.date).setHours(18));
   const start = new Date(end.getTime() - args.minutes * 60_000);
   const startedAt = start.toISOString();
   const endedAt = end.toISOString();
-  const changes: Change[] = [];
+  const changes: Change[] = prev
+    ? [...data.sets.filter((x) => x.sessionId === sessionId).map((x) => del("sets", x.id)), ...sessionExercisesOf(data, sessionId).map((e) => del("sessionExercises", e.id))]
+    : [];
   const items = args.items.filter((it) => lookup(it.exerciseId));
   const allTimed = items.length > 0 && items.every((it) => isTimedKind(lookup(it.exerciseId)!.kind));
+  const done = (it: LoggedExercise) => (isTimedKind(lookup(it.exerciseId)!.kind) ? !!it.minutes : it.sets.some((x) => x.reps !== null && x.reps > 0));
   changes.push(
     upsert("sessions", {
       id: sessionId,
-      planId: null,
-      planDayId: null,
+      planId: prev?.planId ?? null,
+      planDayId: prev?.planDayId ?? null,
       localDate: args.date,
       title: args.title.trim() || "Workout",
-      planName: null,
-      kind: allTimed ? "cardio" : "strength",
-      status: "completed",
+      planName: prev?.planName ?? null,
+      kind: prev?.kind === "activity" ? "activity" : allTimed ? "cardio" : "strength",
+      status: items.every(done) ? "completed" : "partial",
       startedAt,
       endedAt,
       durationSeconds: Math.round(args.minutes * 60),
-      activityType: null,
+      activityType: prev?.activityType ?? null,
       notes: args.notes,
     } satisfies WorkoutSession),
   );
