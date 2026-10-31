@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BUILT_IN_EXERCISES } from "../src/lib/data/exercises";
 import { muscleTargets, musclesFor } from "../src/lib/data/muscles";
 import { ANIMATIONS, animationFor } from "../src/features/animation/library";
-import { angleOf, joints, wrap, type Pose, type Pt } from "../src/features/animation/figure";
+import { angleOf, joints, withBody, wrap, type Pose, type Pt } from "../src/features/animation/figure";
 
 test("muscle names map onto the right areas of the muscle map", () => {
   assert.deepEqual(musclesFor(["Glutes (side)"]), ["abductors"]);
@@ -46,6 +46,17 @@ test("animations produce valid geometry through the whole movement", () => {
       assert.ok(!json.includes("NaN") && !json.includes("null"), `${key} has broken geometry at t=${i / 24}`);
     }
     for (const f of anim.frames) assert.ok(f.t >= 0 && f.t < 1 && f.label, `${key} frame`);
+  }
+});
+
+test("the female figure draws every animation and differs from the male one", () => {
+  for (const [key, anim] of Object.entries(ANIMATIONS)) {
+    for (const t of [0.1, 0.4, 0.7]) {
+      const her = withBody("female", () => anim.at(t, []));
+      const json = JSON.stringify(her);
+      assert.ok(her.length > 40 && !json.includes("NaN") && !json.includes("null"), `${key} female at t=${t}`);
+      assert.notEqual(json, JSON.stringify(withBody("male", () => anim.at(t, []))), `${key} female looks different`);
+    }
   }
 });
 

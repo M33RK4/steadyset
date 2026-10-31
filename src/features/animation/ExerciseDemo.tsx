@@ -2,12 +2,13 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { animationFor, type ExerciseAnimation } from "./library";
-import type { Shape } from "./figure";
+import { withBody, type Shape } from "./figure";
 import { motionRuns, shapesToSvg } from "./render";
 import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
 import { musclesFor, type MuscleId } from "@/lib/data/muscles";
 import { Icon } from "@/components/ui/Icon";
 import { cx } from "@/components/ui/primitives";
+import { useApp } from "@/lib/store/AppStore";
 
 /** A still picture of the demonstration. */
 export function ExerciseFigure({ shapes, viewBox, label }: { shapes: Shape[]; viewBox: string; label?: string }) {
@@ -79,7 +80,13 @@ function prefersReducedMotion(): boolean {
  * frame-by-frame view (start → finish with a direction cue) and can still press play.
  */
 export function ExerciseDemo({ animation, name, compact }: { animation: string; name: string; compact?: boolean }) {
-  const anim = useMemo(() => animationFor(animation), [animation]);
+  // drawn with the same body as the muscle map (Settings → Exercise body)
+  const { prefs } = useApp();
+  const body = prefs.bodyType ?? "female";
+  const anim = useMemo((): ExerciseAnimation => {
+    const a = animationFor(animation);
+    return { ...a, at: (t, m) => withBody(body, () => a.at(t, m)) };
+  }, [animation, body]);
   const muscles = useMuscles(animation);
   const viewBox = anim.viewBox ?? "0 0 200 150";
   const [playing, setPlaying] = useState(true);

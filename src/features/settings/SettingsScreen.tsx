@@ -116,10 +116,10 @@ export function SettingsScreen() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>
-              <span className="font-semibold block">Muscle map body</span>
-              <span className="text-sm text-muted">The body shown on each exercise's muscle map.</span>
+              <span className="font-semibold block">Exercise body</span>
+              <span className="text-sm text-muted">The body shown in exercise animations and muscle maps.</span>
             </span>
-            <Segmented label="Muscle map body" value={prefs.bodyType} onChange={(v) => setPrefs({ bodyType: v })} options={[{ value: "female", label: "Female" }, { value: "male", label: "Male" }]} />
+            <Segmented label="Exercise body" value={prefs.bodyType} onChange={(v) => setPrefs({ bodyType: v })} options={[{ value: "female", label: "Female" }, { value: "male", label: "Male" }]} />
           </div>
           <div className="space-y-2">
             <p className="font-medium">Default rest timer</p>

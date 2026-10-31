@@ -77,6 +77,22 @@ export type Shape =
 export const L = { torso1: 22, torso2: 22, neck: 5, head: 8, upper: 24, fore: 22, thigh: 30, shin: 30, foot: 9 };
 export const FLOOR = 135;
 
+/**
+ * Which body the figure is drawn with (the "Exercise body" setting). The female figure has a
+ * ponytail, a fitted tank top, a curvier torso, slimmer arms and leggings; poses are the same.
+ * Set around a drawing call with `withBody`.
+ */
+let female = false;
+export function withBody<T>(body: "male" | "female", draw: () => T): T {
+  const was = female;
+  female = body === "female";
+  try {
+    return draw();
+  } finally {
+    female = was;
+  }
+}
+
 export type HandKind = "fist" | "flat";
 
 /** Side-view pose. Angles in degrees, SVG convention: 0 = right, 90 = down, -90 = up. */
@@ -375,14 +391,40 @@ function head(j: Joints): Shape[] {
     P(-7.8, 1.6), P(-4.6, 7), P(0.4, 8.4), P(5.4, 5.8), P(7.3, 2.6), P(7.1, 1.2), P(9.3, -1.1), P(7.9, -2.3), P(8.1, -3.3), P(7.7, -4.2), P(7.9, -4.9), P(6.8, -6.9), P(4, -8), P(-0.4, -6.2), P(-5.2, -4.8),
   ]);
   const hairOuter = smooth([P(4.9, 6.4), P(2.4, 8.6), P(-2, 8.9), P(-6.4, 6.4), P(-8.6, 2), P(-8.2, -2.2), P(-6, -4.6), P(-4.8, -3.2), P(-5.8, -0.4), P(-4.8, 3.4), P(-1.6, 5.6), P(2.6, 6), P(4.6, 4.8)]);
+  const hairGrad: Grad = { kind: "linear", a: P(0, 9), b: P(0, -4), stops: [{ o: 0, tone: "hair", shade: 12 }, { o: 1, tone: "hair", shade: -10 }] };
+  // female: a ponytail tied at the back of the head, drawn behind it. It hangs with gravity
+  // (whatever the head is doing) and lies along the floor rather than going through it.
+  const ponytail: Shape[] = [];
+  if (female) {
+    const back = mul(face, -1);
+    const hang = unit(add([0, 1], mul(back, 0.45)));
+    const base = P(-7.6, 2.6);
+    const p1 = add(add(base, mul(back, 2.6)), mul(hang, 1.6));
+    const p2 = add(p1, mul(hang, 5));
+    const p3 = add(p2, mul(hang, 5.4));
+    const away = Math.sign(back[0]) || -1;
+    const spine = [base, p1, p2, p3].map((p): Pt => (p[1] > FLOOR - 1.6 ? [p[0] + away * (p[1] - FLOOR + 1.6) * 0.9, FLOOR - 1.6] : p));
+    const widths = [2, 2.5, 1.9, 0.5];
+    const side = (s: number) =>
+      spine.map((p, i) => {
+        const tan = unit(sub(spine[Math.min(i + 1, 3)], spine[Math.max(i - 1, 0)]));
+        return add(p, mul(perp(tan), widths[i] * s));
+      });
+    ponytail.push(
+      { k: "path", d: smooth([...side(1), ...side(-1).reverse()]), w: 0, fill: true, tone: "hair", grad: hairGrad, stroke: "line", sw: OUT },
+      { k: "path", d: smooth(spine.slice(1), false), w: 0.4, tone: "hair", shade: 30, op: 0.7 },
+    );
+  }
   return [
+    ...ponytail,
     { k: "path", d: profile, w: 0, fill: true, tone: "skin", grad: { kind: "radial", c: P(3, 2.4), r: 11, stops: [{ o: 0, tone: "skin", shade: 16 }, { o: 0.6, tone: "skin" }, { o: 1, tone: "skin", shade: -18 }] }, stroke: "line", sw: OUT },
     // cheek and jaw shading
     { k: "path", d: smooth([P(1, -1.6), P(5.4, -2.8), P(5.6, -6.2), P(2.4, -6.8), P(-0.4, -5)]), w: 0, fill: true, tone: "skinShade", op: 0.35 },
     // eye, brow, nostril, lips
     { k: "path", d: smooth([P(4.2, 1.1), P(5.4, 1.7), P(6.3, 1), P(5.4, 0.5)]), w: 0, fill: true, tone: "white", stroke: "line", sw: 0.35 },
     { k: "circle", c: P(5.5, 1.05), r: 0.55, tone: "line" },
-    { k: "path", d: `M${f2(P(3.6, 2.5))} Q${f2(P(5.2, 3.3))} ${f2(P(6.8, 2.6))}`, w: 0.7, tone: "hair" },
+    { k: "path", d: `M${f2(P(3.6, 2.5))} Q${f2(P(5.2, 3.3))} ${f2(P(6.8, 2.6))}`, w: female ? 0.45 : 0.7, tone: "hair" },
+    ...(female ? [{ k: "path", d: `M${f2(P(6.1, 1.3))} L${f2(P(7, 1.9))} M${f2(P(5.8, 1.6))} L${f2(P(6.5, 2.3))}`, w: 0.35, tone: "line" } as Shape] : []),
     { k: "path", d: `M${f2(P(7.6, -1.9))} Q${f2(P(7, -2.3))} ${f2(P(6.6, -1.6))}`, w: 0.4, tone: "line", op: 0.6 },
     { k: "path", d: smooth([P(7.9, -3.4), P(6.8, -3.7), P(7.6, -4.6), P(7.9, -4.9)]), w: 0, fill: true, tone: "lips", op: 0.9 },
     { k: "line", a: P(7.4, -4.15), b: P(6.4, -4.05), w: 0.35, tone: "line", op: 0.5 },
@@ -390,7 +432,8 @@ function head(j: Joints): Shape[] {
     { k: "path", d: smooth([P(-0.8, 1), P(0.6, 0.2), P(0.5, -2.2), P(-0.6, -2.8), P(-1.4, -1)]), w: 0, fill: true, tone: "skin", shade: -6, stroke: "line", sw: 0.4, op: 0.95 },
     { k: "path", d: `M${f2(P(-0.2, -0.2))} Q${f2(P(0.2, -1.2))} ${f2(P(-0.6, -1.8))}`, w: 0.35, tone: "line", op: 0.4 },
     // hair with a few strands
-    { k: "path", d: hairOuter, w: 0, fill: true, tone: "hair", grad: { kind: "linear", a: P(0, 9), b: P(0, -4), stops: [{ o: 0, tone: "hair", shade: 12 }, { o: 1, tone: "hair", shade: -10 }] }, stroke: "line", sw: OUT },
+    { k: "path", d: hairOuter, w: 0, fill: true, tone: "hair", grad: hairGrad, stroke: "line", sw: OUT },
+    ...(female ? [{ k: "circle", c: P(-7.8, 3), r: 1.3, tone: "accent", stroke: "line", sw: 0.4 } as Shape] : []),
     ...[
       [P(3.4, 7.4), P(-1, 7.6), P(-5.4, 4.6)],
       [P(1.4, 6.6), P(-3, 6.8), P(-7, 1.8)],
@@ -407,8 +450,13 @@ function torso(j: Joints) {
   const n1 = perp(u1);
   const nm = unit(add(n0, n1));
   const chestAt = lerpPt(j.mid, j.neck, 0.55);
-  const front: Pt[] = [add(j.neck, mul(n1, 4.2)), add(add(chestAt, mul(n1, 8.4)), mul(u1, 1)), add(lerpPt(j.mid, j.neck, 0.15), mul(nm, 7.3)), add(j.mid, mul(nm, 6.5)), add(lerpPt(j.hip, j.mid, 0.45), mul(n0, 6.5)), add(j.hip, mul(n0, 6.2))];
-  const back: Pt[] = [add(j.hip, mul(n0, -7.4)), add(lerpPt(j.hip, j.mid, 0.5), mul(n0, -5.7)), add(j.mid, mul(nm, -6.2)), add(lerpPt(j.mid, j.neck, 0.55), mul(n1, -7.1)), add(j.neck, mul(n1, -4.4)), add(j.neck, mul(u1, 2.2))];
+  // female: fuller bust, narrower waist, rounder hips and glutes
+  const front: Pt[] = female
+    ? [add(j.neck, mul(n1, 4)), add(lerpPt(j.mid, j.neck, 0.68), mul(n1, 7.4)), add(lerpPt(j.mid, j.neck, 0.44), mul(n1, 9.6)), add(lerpPt(j.mid, j.neck, 0.2), mul(nm, 6.4)), add(j.mid, mul(nm, 5.4)), add(lerpPt(j.hip, j.mid, 0.45), mul(n0, 5.8)), add(j.hip, mul(n0, 6.2))]
+    : [add(j.neck, mul(n1, 4.2)), add(add(chestAt, mul(n1, 8.4)), mul(u1, 1)), add(lerpPt(j.mid, j.neck, 0.15), mul(nm, 7.3)), add(j.mid, mul(nm, 6.5)), add(lerpPt(j.hip, j.mid, 0.45), mul(n0, 6.5)), add(j.hip, mul(n0, 6.2))];
+  const back: Pt[] = female
+    ? [add(j.hip, mul(n0, -8.2)), add(lerpPt(j.hip, j.mid, 0.5), mul(n0, -5.2)), add(j.mid, mul(nm, -5.3)), add(lerpPt(j.mid, j.neck, 0.55), mul(n1, -6.4)), add(j.neck, mul(n1, -4)), add(j.neck, mul(u1, 2))]
+    : [add(j.hip, mul(n0, -7.4)), add(lerpPt(j.hip, j.mid, 0.5), mul(n0, -5.7)), add(j.mid, mul(nm, -6.2)), add(lerpPt(j.mid, j.neck, 0.55), mul(n1, -7.1)), add(j.neck, mul(n1, -4.4)), add(j.neck, mul(u1, 2.2))];
   return { n0, n1, nm, u0, u1, chestAt, front, back };
 }
 
@@ -417,7 +465,9 @@ function trunkShapes(j: Joints): Shape[] {
   const neckTop = add(j.head, mul(dir(j.headAngle, 1, [0, 0]), -4));
   const glute = add(add(j.hip, mul(t.n0, -6.4)), mul(t.u0, -2.2));
   const H = (x: number, y: number) => add(add(j.hip, mul(t.n0, x)), mul(t.u0, y));
-  const pelvis = smooth([H(6.3, 6.6), H(6.7, 0), H(4.2, -5.2), H(0, -6.4), add(glute, mul(t.u0, -3.4)), H(-8.7, -0.6), H(-7.7, 5.4), H(-6.9, 7.3)]);
+  const pelvis = female
+    ? smooth([H(6.3, 6.6), H(6.7, 0), H(4.2, -5.2), H(0, -6.4), add(glute, mul(t.u0, -3.6)), H(-9.8, -0.4), H(-8.6, 5.4), H(-7.6, 7.3)])
+    : smooth([H(6.3, 6.6), H(6.7, 0), H(4.2, -5.2), H(0, -6.4), add(glute, mul(t.u0, -3.4)), H(-8.7, -0.6), H(-7.7, 5.4), H(-6.9, 7.3)]);
   const shirtGrad: Grad = { kind: "linear", a: add(j.mid, mul(t.nm, 9)), b: add(j.mid, mul(t.nm, -8)), stops: [{ o: 0, tone: "shirt", shade: 18 }, { o: 0.4, tone: "shirt", shade: 4 }, { o: 1, tone: "shirt", shade: -20 }] };
   const shortsGrad: Grad = { kind: "linear", a: H(8, 0), b: H(-9, 0), stops: [{ o: 0, tone: "shorts", shade: 16 }, { o: 1, tone: "shorts", shade: -16 }] };
   return [
@@ -430,7 +480,10 @@ function trunkShapes(j: Joints): Shape[] {
     { k: "path", d: `M${f2(add(lerpPt(j.mid, j.neck, 0.72), mul(t.n1, -4.6)))} Q${f2(add(lerpPt(j.mid, j.neck, 0.5), mul(t.n1, -6)))} ${f2(add(lerpPt(j.mid, j.neck, 0.25), mul(t.n1, -5.2)))}`, w: 0.5, tone: "line", op: 0.28 },
     { k: "path", d: `M${f2(add(j.neck, mul(t.n1, 3.8)))} Q${f2(add(j.neck, mul(t.u1, -2.8)))} ${f2(add(j.neck, mul(t.n1, -3.6)))}`, w: 1.4, tone: "shirt", shade: -14 },
     { k: "path", d: `M${f2(add(j.neck, mul(t.n1, 3.8)))} Q${f2(add(j.neck, mul(t.u1, -2.8)))} ${f2(add(j.neck, mul(t.n1, -3.6)))}`, w: 0.5, tone: "line", op: 0.5 },
-    { k: "circle", c: add(add(t.chestAt, mul(t.n1, 5.2)), mul(t.u1, 1.6)), r: 1.3, tone: "shirt", shade: 34, op: 0.9 },
+    ...(female
+      ? // tank top: a seam under the bust instead of the t-shirt's logo dot
+        [{ k: "path", d: `M${f2(add(lerpPt(j.mid, j.neck, 0.3), mul(t.n1, 7.2)))} Q${f2(add(lerpPt(j.mid, j.neck, 0.24), mul(t.n1, 2)))} ${f2(add(lerpPt(j.mid, j.neck, 0.3), mul(t.n1, -2.6)))}`, w: 0.45, tone: "line", op: 0.3 } as Shape]
+      : [{ k: "circle", c: add(add(t.chestAt, mul(t.n1, 5.2)), mul(t.u1, 1.6)), r: 1.3, tone: "shirt", shade: 34, op: 0.9 } as Shape]),
     // shorts: pelvis, waistband, drawstring
     { k: "path", d: pelvis, w: 0, fill: true, tone: "shorts", grad: shortsGrad, stroke: "line", sw: OUT },
     { k: "path", d: `M${f2(H(6.2, 5.6))} Q${f2(H(0, 7.2))} ${f2(H(-7.2, 6.6))}`, w: 0.55, tone: "line", op: 0.45 },
@@ -449,6 +502,22 @@ function legShapes(j: Joints, i: 0 | 1): Shape[] {
   const shortsEnd = add(hipJ, mul(sub(knee, hipJ), 0.55));
   const sockTop = add(ankle, mul(shinU, -4));
   const shorts: Tone = near ? "shorts" : "shortsFar";
+  if (female) {
+    // 7/8 leggings: the whole thigh and most of the shin, with the ankle showing above the sock
+    const cuff = lerpPt(knee, ankle, 0.8);
+    return [
+      limb(knee, ankle, 4, 2.3, skin, 1.8, 0.2, 0.3, near ? 1 : 0.6),
+      limb(sockTop, ankle, 2.7, 2.5, "sock", 0, 0, 0.5, 0.5),
+      limb(knee, cuff, 4.5, 2.9, shorts, 2, 0.2, 0.35, near ? 0.9 : 0.6),
+      { k: "line", a: add(cuff, mul(perp(shinU), 2.8)), b: add(cuff, mul(perp(shinU), -2.8)), w: 0.45, tone: "line", op: 0.4 },
+      limb(add(hipJ, mul(thighU, -1)), knee, 7.4, 4.6, shorts, 1.4, 1.2, 0.42, near ? 0.9 : 0.6),
+      ...(near ? [along(hipJ, knee, 0.5, 0.92, -3.6, -2.4, -1, "line", 0.22)] : []),
+      { k: "ellipse", c: add(knee, mul(perp(thighU), -2.8)), rx: 2.3, ry: 1.8, rot: angleOf(hipJ, knee), tone: shorts, shade: 10, op: 0.8 },
+      along(hipJ, knee, 0.05, 0.98, 0, 0, 0.2, near ? "stripe" : "shortsFar", near ? 0.9 : 0.4, 0.9),
+      along(knee, cuff, 0.02, 0.98, 0.4, 0.4, 0.1, near ? "stripe" : "shortsFar", near ? 0.9 : 0.4, 0.9),
+      ...shoe(ankle, j.toe[i], near),
+    ];
+  }
   return [
     limb(knee, ankle, 4.4, 2.5, skin, 2, 0.2, 0.3, near ? 1 : 0.6), // shin with calf
     ...(near ? [along(knee, ankle, 0.12, 0.55, 2.2, 1.6, 1.2), along(knee, ankle, 0.2, 0.75, -2.6, -1.4, -0.3, "line", 0.22)] : []),
@@ -472,6 +541,17 @@ function armShapes(j: Joints, i: 0 | 1): Shape[] {
   const sleeveA = add(s, mul(unit(sub(e, s)), -1.5));
   const sleeveEnd = lerpPt(s, e, 0.42);
   const shirt: Tone = near ? "shirt" : "shirtFar";
+  if (female) {
+    // slimmer arms, bare shoulders (tank top) with just the strap over the top
+    const strapA = add(s, mul(unit(sub(e, s)), -1.2));
+    return [
+      limb(e, h, 3, 2, skin, 0.5, 1, 0.25, near ? 1 : 0.6),
+      limb(s, e, 3.7, 2.8, skin, 0.9, 1, 0.45, near ? 1 : 0.6),
+      ...(near ? [along(s, e, 0.45, 0.92, -0.2, -0.4, 0.5, "line", 0.22)] : []),
+      { k: "path", d: `M${f2(add(strapA, mul(perp(unit(sub(e, s))), 3.2)))} Q${f2(add(strapA, mul(unit(sub(e, s)), -2.2)))} ${f2(add(strapA, mul(perp(unit(sub(e, s))), -3.4)))}`, w: 1.6, tone: shirt },
+      ...hand(h, j.handAngle[i], skin, j.handKind[i]),
+    ];
+  }
   return [
     limb(e, h, 3.3, 2.15, skin, 0.5, 1.1, 0.25, near ? 1 : 0.6), // forearm
     ...(near ? [along(e, h, 0.08, 0.6, -1.6, -0.6, -0.6, "line", 0.25)] : []),
@@ -687,15 +767,21 @@ export function frontJoints(p: FrontPose): FrontJoints {
 function frontFace(h: Pt): Shape[] {
   const [x, y] = h;
   return [
-    // ears first, then the face over them
-    { k: "path", d: smooth([[x - 7.2, y - 1.4], [x - 8.8, y - 1.6], [x - 9, y + 1.6], [x - 7.4, y + 3]]), w: 0, fill: true, tone: "skin", shade: -6, stroke: "line", sw: 0.45 },
-    { k: "path", d: smooth([[x + 7.2, y - 1.4], [x + 8.8, y - 1.6], [x + 9, y + 1.6], [x + 7.4, y + 3]]), w: 0, fill: true, tone: "skin", shade: -6, stroke: "line", sw: 0.45 },
+    // female: hair falling behind the face to the jaw, in place of the ears
+    ...(female
+      ? [{ k: "path", d: smooth([[x - 8.4, y - 4], [x - 9.6, y + 4], [x - 8.4, y + 9.4], [x - 4, y + 7], [x + 4, y + 7], [x + 8.4, y + 9.4], [x + 9.6, y + 4], [x + 8.4, y - 4], [x, y - 10.4]]), w: 0, fill: true, tone: "hair", shade: -6, stroke: "line", sw: OUT } as Shape]
+      : ([
+          // ears first, then the face over them
+          { k: "path", d: smooth([[x - 7.2, y - 1.4], [x - 8.8, y - 1.6], [x - 9, y + 1.6], [x - 7.4, y + 3]]), w: 0, fill: true, tone: "skin", shade: -6, stroke: "line", sw: 0.45 },
+          { k: "path", d: smooth([[x + 7.2, y - 1.4], [x + 8.8, y - 1.6], [x + 9, y + 1.6], [x + 7.4, y + 3]]), w: 0, fill: true, tone: "skin", shade: -6, stroke: "line", sw: 0.45 },
+        ] as Shape[])),
     { k: "path", d: smooth([[x, y - 8.8], [x + 6.6, y - 6], [x + 7.4, y - 0.6], [x + 6, y + 5], [x, y + 8.8], [x - 6, y + 5], [x - 7.4, y - 0.6], [x - 6.6, y - 6]]), w: 0, fill: true, tone: "skin", grad: { kind: "radial", c: [x - 1.6, y - 1.8], r: 10, stops: [{ o: 0, tone: "skin", shade: 16 }, { o: 0.65, tone: "skin" }, { o: 1, tone: "skin", shade: -16 }] }, stroke: "line", sw: OUT },
     // eyes, brows, nose, mouth
     ...[-1, 1].flatMap((s): Shape[] => [
       { k: "path", d: smooth([[x + s * 1.4, y + 0.6], [x + s * 2.8, y - 0.2], [x + s * 4.2, y + 0.6], [x + s * 2.8, y + 1.2]]), w: 0, fill: true, tone: "white", stroke: "line", sw: 0.35 },
       { k: "circle", c: [x + s * 2.8, y + 0.55], r: 0.55, tone: "line" },
-      { k: "path", d: `M${x + s * 1.2},${y - 1.6} Q${x + s * 2.8},${y - 2.6} ${x + s * 4.4},${y - 1.6}`, w: 0.7, tone: "hair" },
+      { k: "path", d: `M${x + s * 1.2},${y - 1.6} Q${x + s * 2.8},${y - 2.6} ${x + s * 4.4},${y - 1.6}`, w: female ? 0.45 : 0.7, tone: "hair" },
+      ...(female ? [{ k: "path", d: `M${x + s * 4},${y + 0.2} L${x + s * 4.9},${y - 0.5}`, w: 0.35, tone: "line" } as Shape] : []),
     ]),
     { k: "path", d: `M${x},${y + 0.8} L${x - 0.9},${y + 3.6} Q${x},${y + 4.2} ${x + 0.9},${y + 3.6}`, w: 0.45, tone: "line", op: 0.5 },
     { k: "path", d: smooth([[x - 2.2, y + 5.4], [x, y + 5], [x + 2.2, y + 5.4], [x, y + 6.4]]), w: 0, fill: true, tone: "lips", op: 0.9 },
@@ -749,12 +835,21 @@ export function frontLayers(j: FrontJoints, muscles: MuscleId[] = [], k = 0): Fr
       const kneeTop: Pt = [kn[0], kn[1] - 3];
       legs.push(vlimb(add(kn, [0, 2]), f, 5, 2.8, "skin", 1, 0.3));
       legs.push(vlimb(add(f, [0, -6]), add(f, [0, -1]), 3.1, 3, "sock", 0));
-      legs.push({ k: "path", d: smooth([add(hip, [-sign * 6.2, -1]), add(hip, [sign * 6.6, -1.4]), add(kneeTop, [sign * 8.2, 0]), add(kn, [sign * 7.4, 4]), add(kn, [0, 6.6]), add(kn, [-sign * 7.4, 4]), add(kneeTop, [-sign * 7.6, 0])]), w: 0, fill: true, tone: "skin", grad: { kind: "linear", a: [kn[0] - 9, 0], b: [kn[0] + 9, 0], stops: [{ o: 0, tone: "skin", shade: sign < 0 ? 18 : -14 }, { o: 0.5, tone: "skin", shade: 6 }, { o: 1, tone: "skin", shade: sign < 0 ? -14 : 18 }] }, stroke: "line", sw: OUT });
-      legs.push({ k: "ellipse", c: add(kn, [0, 2.4]), rx: 3.6, ry: 3.1, tone: "skin", shade: 16, stroke: "line", sw: 0.4 });
+      // female: leggings over the thigh and most of the shin
+      const thighTone: Tone = female ? "shorts" : "skin";
+      if (female) legs.push(vlimb(add(kn, [0, 2]), lerpPt(add(kn, [0, 2]), f, 0.8), 5.2, 3.2, "shorts", 1, 0.3));
+      legs.push({ k: "path", d: smooth([add(hip, [-sign * 6.2, -1]), add(hip, [sign * 6.6, -1.4]), add(kneeTop, [sign * 8.2, 0]), add(kn, [sign * 7.4, 4]), add(kn, [0, 6.6]), add(kn, [-sign * 7.4, 4]), add(kneeTop, [-sign * 7.6, 0])]), w: 0, fill: true, tone: thighTone, grad: { kind: "linear", a: [kn[0] - 9, 0], b: [kn[0] + 9, 0], stops: [{ o: 0, tone: thighTone, shade: sign < 0 ? 18 : -14 }, { o: 0.5, tone: thighTone, shade: 6 }, { o: 1, tone: thighTone, shade: sign < 0 ? -14 : 18 }] }, stroke: "line", sw: OUT });
+      legs.push({ k: "ellipse", c: add(kn, [0, 2.4]), rx: 3.6, ry: 3.1, tone: thighTone, shade: 16, stroke: "line", sw: 0.4, op: female ? 0.6 : 1 });
       legs.push({ k: "path", d: `M${kn[0] - 3},${kn[1] + 5.8} Q${kn[0]},${kn[1] + 7.2} ${kn[0] + 3},${kn[1] + 5.8}`, w: 0.45, tone: "line", op: 0.45 });
       // shorts cover the half of the thigh nearest the hip
       const hem = lerpPt(hip, kneeTop, 0.5);
-      legs.push({ k: "path", d: smooth([add(hip, [-sign * 7, -2]), add(hip, [sign * 7.2, -2.4]), add(hem, [sign * 8.4, 1]), add(hem, [0, 3]), add(hem, [-sign * 8.2, 1])]), w: 0, fill: true, tone: "shorts", grad: { kind: "linear", a: [hip[0] - 9, 0], b: [hip[0] + 9, 0], stops: [{ o: 0, tone: "shorts", shade: 12 }, { o: 1, tone: "shorts", shade: -12 }] }, stroke: "line", sw: OUT });
+      if (!female) legs.push({ k: "path", d: smooth([add(hip, [-sign * 7, -2]), add(hip, [sign * 7.2, -2.4]), add(hem, [sign * 8.4, 1]), add(hem, [0, 3]), add(hem, [-sign * 8.2, 1])]), w: 0, fill: true, tone: "shorts", grad: { kind: "linear", a: [hip[0] - 9, 0], b: [hip[0] + 9, 0], stops: [{ o: 0, tone: "shorts", shade: 12 }, { o: 1, tone: "shorts", shade: -12 }] }, stroke: "line", sw: OUT });
+    } else if (female) {
+      legs.push(vlimb(kn, f, 4.3, 2.5, "skin", 0.9, 0.3));
+      legs.push(vlimb(add(f, [0, -6]), add(f, [0, -1]), 2.8, 2.7, "sock", 0));
+      legs.push(vlimb(kn, lerpPt(kn, f, 0.8), 4.7, 3.1, "shorts", 0.9, 0.3));
+      legs.push(vlimb(hip, kn, 7.2, 4.8, "shorts", 0.8));
+      legs.push({ k: "line", a: [hip[0] + sign * 6.8, hip[1] - 4], b: lerpPt(kn, f, 0.8), w: 0.9, tone: "stripe", op: 0.9 });
     } else {
       legs.push(vlimb(kn, f, 4.6, 2.7, "skin", 0.9, 0.3));
       legs.push(vlimb(add(f, [0, -6]), add(f, [0, -1]), 3, 2.9, "sock", 0));
@@ -767,20 +862,26 @@ export function frontLayers(j: FrontJoints, muscles: MuscleId[] = [], k = 0): Fr
     legs.push(...frontShoe(f));
   }
   // shorts trunk with waistband and drawstring
-  shorts.push({ k: "path", d: smooth([[cx - 13, waistY], [cx + 13, waistY], [cx + 15.6, j.pelvis[1] + 4], [cx + 9, j.pelvis[1] + 9], [cx, j.pelvis[1] + 6], [cx - 9, j.pelvis[1] + 9], [cx - 15.6, j.pelvis[1] + 4]]), w: 0, fill: true, tone: "shorts", grad: { kind: "linear", a: [cx - 16, 0], b: [cx + 16, 0], stops: [{ o: 0, tone: "shorts", shade: 12 }, { o: 0.5, tone: "shorts" }, { o: 1, tone: "shorts", shade: -14 }] }, stroke: "line", sw: OUT });
+  const hipW = female ? 14.4 : 15.6;
+  shorts.push({ k: "path", d: smooth([[cx - 13, waistY], [cx + 13, waistY], [cx + hipW, j.pelvis[1] + 4], [cx + 9, j.pelvis[1] + 9], [cx, j.pelvis[1] + 6], [cx - 9, j.pelvis[1] + 9], [cx - hipW, j.pelvis[1] + 4]]), w: 0, fill: true, tone: "shorts", grad: { kind: "linear", a: [cx - 16, 0], b: [cx + 16, 0], stops: [{ o: 0, tone: "shorts", shade: 12 }, { o: 0.5, tone: "shorts" }, { o: 1, tone: "shorts", shade: -14 }] }, stroke: "line", sw: OUT });
   shorts.push({ k: "path", d: `M${cx - 13},${waistY + 2.4} Q${cx},${waistY + 3.6} ${cx + 13},${waistY + 2.4}`, w: 0.5, tone: "line", op: 0.45 });
   shorts.push({ k: "path", d: `M${cx - 1.2},${waistY + 3} q-1,3 0.4,4.6 M${cx + 1.2},${waistY + 3} q1,3 -0.4,4.6`, w: 0.45, tone: "white", op: 0.85 });
   // arms
   for (const s of [0, 1] as const) {
-    arms.push(vlimb(j.elbows[s], j.hands[s], 3.3, 2.3, "skin", 0.8, 0.25));
-    arms.push(vlimb(j.shoulders[s], j.elbows[s], 4.2, 3.2, "skin", 1));
+    arms.push(vlimb(j.elbows[s], j.hands[s], female ? 3 : 3.3, female ? 2.1 : 2.3, "skin", 0.8, 0.25));
+    arms.push(vlimb(j.shoulders[s], j.elbows[s], female ? 3.8 : 4.2, female ? 2.9 : 3.2, "skin", 1));
     arms.push({ k: "circle", c: j.hands[s], r: 3, tone: "skin", grad: { kind: "radial", c: add(j.hands[s], [-0.8, -0.8]), r: 3.6, stops: [{ o: 0, tone: "skin", shade: 16 }, { o: 1, tone: "skin", shade: -14 }] }, stroke: "line", sw: OUT });
     arms.push({ k: "path", d: `M${j.hands[s][0] - 1.6},${j.hands[s][1] + 0.6} q1.6,1.4 3.2,0`, w: 0.4, tone: "line", op: 0.5 });
   }
   // t-shirt with sleeves, collar, side seams
-  shirt.push({ k: "path", d: smooth([[cx - 6, j.neck[1] + 1], [sl[0] - 3, sl[1] - 2.6], [sl[0] - 4.6, sl[1] + 4], [sl[0] - 1.8, sl[1] + 20], [cx - 13, waistY + 2], [cx + 13, waistY + 2], [sr[0] + 1.8, sr[1] + 20], [sr[0] + 4.6, sr[1] + 4], [sr[0] + 3, sr[1] - 2.6], [cx + 6, j.neck[1] + 1]]), w: 0, fill: true, tone: "shirt", grad: { kind: "linear", a: [cx - 18, 0], b: [cx + 18, 0], stops: [{ o: 0, tone: "shirt", shade: 14 }, { o: 0.45, tone: "shirt", shade: 4 }, { o: 1, tone: "shirt", shade: -16 }] }, stroke: "line", sw: OUT });
+  const shirtOutline: Pt[] = female
+    ? // tank top: straps over the shoulders, armholes, a narrower waist
+      [[cx - 6, j.neck[1] + 1], [sl[0] + 4, sl[1] - 3], [sl[0] + 2.6, sl[1] + 6], [sl[0] + 2.4, sl[1] + 13], [cx - 10.2, sl[1] + 22], [cx - 12.6, waistY + 2], [cx + 12.6, waistY + 2], [cx + 10.2, sr[1] + 22], [sr[0] - 2.4, sr[1] + 13], [sr[0] - 2.6, sr[1] + 6], [sr[0] - 4, sr[1] - 3], [cx + 6, j.neck[1] + 1]]
+    : [[cx - 6, j.neck[1] + 1], [sl[0] - 3, sl[1] - 2.6], [sl[0] - 4.6, sl[1] + 4], [sl[0] - 1.8, sl[1] + 20], [cx - 13, waistY + 2], [cx + 13, waistY + 2], [sr[0] + 1.8, sr[1] + 20], [sr[0] + 4.6, sr[1] + 4], [sr[0] + 3, sr[1] - 2.6], [cx + 6, j.neck[1] + 1]];
+  shirt.push({ k: "path", d: smooth(shirtOutline), w: 0, fill: true, tone: "shirt", grad: { kind: "linear", a: [cx - 18, 0], b: [cx + 18, 0], stops: [{ o: 0, tone: "shirt", shade: 14 }, { o: 0.45, tone: "shirt", shade: 4 }, { o: 1, tone: "shirt", shade: -16 }] }, stroke: "line", sw: OUT });
   const sleeves: Shape[] = [];
   for (const s of [0, 1] as const) {
+    if (female) continue;
     const a: Pt = [j.shoulders[s][0] + (s ? -1 : 1) * 2.4, j.shoulders[s][1] + 0.6];
     const b = lerpPt(j.shoulders[s], j.elbows[s], 0.4);
     sleeves.push(limb(a, b, 4.6, 4.2, "shirt", 0.2, 0.2));
@@ -788,8 +889,14 @@ export function frontLayers(j: FrontJoints, muscles: MuscleId[] = [], k = 0): Fr
   }
   shirt.push({ k: "path", d: `M${cx - 5.6},${j.neck[1] + 1.6} Q${cx},${j.neck[1] + 7} ${cx + 5.6},${j.neck[1] + 1.6}`, w: 1.4, tone: "shirt", shade: -14 });
   shirt.push({ k: "path", d: `M${cx - 5.6},${j.neck[1] + 1.6} Q${cx},${j.neck[1] + 7} ${cx + 5.6},${j.neck[1] + 1.6}`, w: 0.5, tone: "line", op: 0.5 });
-  shirt.push({ k: "path", d: `M${cx - 1},${j.neck[1] + 12} Q${cx - 6},${j.neck[1] + 20} ${cx - 3},${waistY - 2} M${cx + 1},${j.neck[1] + 12} Q${cx + 6},${j.neck[1] + 20} ${cx + 3},${waistY - 2}`, w: 0.5, tone: "shirtShade", op: 0.8 });
-  shirt.push({ k: "circle", c: [cx + 6, j.neck[1] + 10], r: 1.4, tone: "shirt", shade: 34, op: 0.9 });
+  if (female) {
+    // bust shaping and a seam under it
+    shirt.push({ k: "path", d: `M${cx - 9},${j.neck[1] + 13} Q${cx - 4.6},${j.neck[1] + 17} ${cx - 0.6},${j.neck[1] + 13.4} M${cx + 9},${j.neck[1] + 13} Q${cx + 4.6},${j.neck[1] + 17} ${cx + 0.6},${j.neck[1] + 13.4}`, w: 0.5, tone: "shirtShade", op: 0.9 });
+    shirt.push({ k: "path", d: `M${cx - 10},${j.neck[1] + 18} Q${cx},${j.neck[1] + 19.6} ${cx + 10},${j.neck[1] + 18}`, w: 0.45, tone: "line", op: 0.3 });
+  } else {
+    shirt.push({ k: "path", d: `M${cx - 1},${j.neck[1] + 12} Q${cx - 6},${j.neck[1] + 20} ${cx - 3},${waistY - 2} M${cx + 1},${j.neck[1] + 12} Q${cx + 6},${j.neck[1] + 20} ${cx + 3},${waistY - 2}`, w: 0.5, tone: "shirtShade", op: 0.8 });
+    shirt.push({ k: "circle", c: [cx + 6, j.neck[1] + 10], r: 1.4, tone: "shirt", shade: 34, op: 0.9 });
+  }
   // neck and head
   const h = j.head;
   headL.push(limb(j.neck, [cx, h[1] + 6], 3.5, 3.2, "skin", 0.2, 0.2));
