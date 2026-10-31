@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { THEMES, resolveMode } from "@/lib/themes";
@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const inWorkout = path === "/workout";
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="relative isolate min-h-dvh flex flex-col">
       <TimerWatcher />
       <ReminderWatcher />
       <Backdrop />
@@ -95,9 +95,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!inWorkout && <ResumeBanner />}
       <GuestImportDialog />
 
-      <main id="main" className={cx("flex-1 w-full mx-auto px-4 md:px-8 pt-6 md:pt-10", inWorkout ? "max-w-3xl pb-12" : "max-w-6xl pb-32 lg:pb-16")}>
+      <main id="main" className={cx("relative flex-1 w-full mx-auto px-4 md:px-8 pt-6 md:pt-10", inWorkout ? "max-w-3xl pb-12" : "max-w-6xl pb-32 lg:pb-16")}>
         {ready ? (
-          <div key={path} className={pageAnim}>
+          <div key={path} className={cx("relative", pageAnim)}>
             {children}
           </div>
         ) : (
@@ -116,19 +116,81 @@ export function AppShell({ children }: { children: ReactNode }) {
 /** Phones & tablets: a floating dock; the current tab grows to show its name under a sliding glass pill. */
 function MobileDock({ path, active }: { path: string; active: string | null }) {
   const docked = NAV.some((n) => n.dock && n.href === active) ? active : null;
+  const router = useRouter();
+  // Hold the glass pill and slide it to another tab; letting go there opens that tab.
+  const [dragX, setDragX] = useState<number | null>(null);
+  const [release, setRelease] = useState(0);
+  const press = useRef<{ x0: number; id: number; dragging: boolean } | null>(null);
+  const justDragged = useRef(false);
+  const listX = (e: { clientX: number; currentTarget: Element }) => e.clientX - e.currentTarget.getBoundingClientRect().left;
+  const nearestTab = (ul: Element, clientX: number) => {
+    let best: string | null = null;
+    let d = Infinity;
+    ul.querySelectorAll<HTMLElement>("[data-glass]").forEach((li) => {
+      const b = li.getBoundingClientRect();
+      const dd = Math.abs(clientX - (b.left + b.width / 2));
+      if (dd < d) {
+        d = dd;
+        best = li.dataset.glass ?? null;
+      }
+    });
+    return best as string | null;
+  };
   return (
     <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
-      <ul className="dock relative mx-auto max-w-md rounded-card flex items-center justify-between p-1.5">
-        <GlassIndicator activeKey={docked} className="rounded-btn" />
+      <ul
+        className={cx("dock relative mx-auto max-w-md rounded-card flex items-center justify-between p-1.5", dragX !== null && "touch-none")}
+        onPointerDown={(e) => {
+          // only the current tab's glass pill can be picked up
+          const li = (e.target as Element).closest<HTMLElement>("[data-glass]");
+          if (!li || li.dataset.glass !== docked) return;
+          press.current = { x0: e.clientX, id: e.pointerId, dragging: false };
+        }}
+        onPointerMove={(e) => {
+          const p = press.current;
+          if (!p || p.id !== e.pointerId) return;
+          if (!p.dragging && Math.abs(e.clientX - p.x0) < 8) return;
+          if (!p.dragging) {
+            p.dragging = true;
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }
+          setDragX(listX(e));
+        }}
+        onPointerUp={(e) => {
+          const p = press.current;
+          press.current = null;
+          if (!p?.dragging) return;
+          justDragged.current = true;
+          const to = nearestTab(e.currentTarget, e.clientX);
+          setDragX(null);
+          setRelease((n) => n + 1);
+          if (to && to !== docked) router.push(to);
+        }}
+        onPointerCancel={() => {
+          press.current = null;
+          setDragX(null);
+          setRelease((n) => n + 1);
+        }}
+        onClickCapture={(e) => {
+          // the click that ends a drag must not also open the tab under the finger's start
+          if (justDragged.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            justDragged.current = false;
+          }
+        }}
+      >
+        <GlassIndicator activeKey={docked} className="rounded-btn" dragX={dragX} release={release} />
         {NAV.filter((n) => n.dock).map((n) => {
           const on = isActive(path, n.href);
           return (
             <li key={n.href} data-glass={n.href} className={cx("relative transition-[flex-grow] duration-300 ease-[cubic-bezier(0.3,1.2,0.4,1)]", on ? "grow-[2.2]" : "grow")}>
               <Link
                 href={n.href}
+                draggable={false}
                 aria-current={on ? "page" : undefined}
                 aria-label={n.label}
-                className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors duration-300", on ? "text-accent-ink px-3" : "text-muted hover:text-ink")}
+                className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors duration-300", on && dragX === null ? "text-accent-ink px-3" : on ? "text-muted px-3" : "text-muted hover:text-ink")}
               >
                 <Icon name={n.icon} size={21} />
                 {on && <span className="truncate anim-label">{n.short}</span>}

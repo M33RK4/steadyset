@@ -121,13 +121,12 @@ export function Backdrop() {
       <div className="absolute inset-0" style={{ background: "radial-gradient(60% 50% at 85% 0%, var(--bg-glow) 0%, transparent 70%), radial-gradient(50% 40% at 0% 100%, var(--bg-glow) 0%, transparent 70%)" }} />
       {prefs.theme === "lily" ? (
         <>
-          <svg viewBox="-60 -60 120 120" className="absolute -top-16 -right-16 w-80 opacity-40">
-            <LilyFlower scale={1} rotate={15} />
-          </svg>
-          <svg viewBox="-60 -60 120 120" className="absolute bottom-24 -left-20 w-64 opacity-30">
-            <LilyFlower scale={1} rotate={-25} />
-          </svg>
-          <svg viewBox="-60 -60 120 120" className="absolute top-1/2 right-[8%] w-24 opacity-20 hidden lg:block">
+          {/* large sprays that fill the screen: one rising from the bottom right, one hanging from the top left */}
+          <LilySpray className="absolute -right-[14vw] -bottom-[4vh] w-[118vw] max-w-[900px] opacity-50" />
+          <div className="absolute -left-[22vw] -top-[2vh] w-[86vw] max-w-[640px] rotate-180 opacity-25">
+            <LilySpray className="w-full" />
+          </div>
+          <svg viewBox="-60 -60 120 120" className="absolute top-[42%] right-[6%] w-28 md:w-40 opacity-30">
             <LilyFlower scale={1} rotate={40} />
           </svg>
         </>

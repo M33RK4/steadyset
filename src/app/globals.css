@@ -363,6 +363,19 @@
   }
 }
 
+/* Lily: page cards are frosted glass so the lilies behind them show through (dialogs and menus stay solid). */
+[data-theme="lily"] main .card {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  backdrop-filter: blur(3px);
+}
+[data-theme="lily"][data-mode="dark"] main .card {
+  background: color-mix(in srgb, var(--surface) 66%, transparent);
+}
+[data-theme="lily"] main .card .card {
+  background: transparent;
+  backdrop-filter: none;
+}
+
 /* Lily: headings breathe a little more, and <em> inside a heading turns to italic accent. */
 [data-theme="lily"] h1 {
   letter-spacing: -0.02em;

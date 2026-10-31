@@ -20,6 +20,7 @@ import {
   unit,
   type FrontJoints,
   type FrontPose,
+  type HandKind,
   type Joints,
   type Pose,
   type Pt,
@@ -912,6 +913,168 @@ const seatedCalfRaise: ExerciseAnimation = {
   })(),
 };
 
+/**
+ * Floor mobility drills: a mat and the body moving between a few key poses. Kneeling knees sit
+ * on the floor at y≈132, so a kneeling hip is about a thigh's length above it.
+ */
+function floorMove(cycle: number, cue: string, frames: { t: number; label: string }[], poses: Pose[], extra?: (j: Joints) => Shape[], track?: (j: Joints) => Pt): ExerciseAnimation {
+  const hold = 0.1;
+  const move = (1 - hold * poses.length) / poses.length;
+  return { cycle, cue, frames, at: side(poses.map((pose) => ({ pose, hold, move })), (j) => ({ back: [shadow(100, 130), ...mat(14, 186), ...(extra?.(j) ?? [])] }), track) };
+}
+const FLAT: [HandKind, HandKind] = ["flat", "flat"];
+
+const adductorRockBack = floorMove(
+  3.6,
+  "On hands and knees with one leg out to the side: the hips rock back toward the heel, then forward again.",
+  [{ t: 0, label: "Hips over the knees" }, { t: 0.5, label: "Rocked back" }],
+  [
+    { hip: [92, 101], torso: [-4, -2], head: 14, hands: [[136, 131], [138, 131]], feet: [[64, 129], [126, 131]], footAngle: [180, 0], handKind: FLAT },
+    { hip: [74, 110], torso: [-14, -8], head: 8, hands: [[136, 131], [138, 131]], feet: [[64, 129], [126, 131]], footAngle: [180, 0], handKind: FLAT },
+  ],
+  undefined,
+  (j) => j.hip,
+);
+
+const lungeRock = floorMove(
+  3.4,
+  "Half-kneeling: the hips rock forward to stretch the front of the back hip, then back.",
+  [{ t: 0, label: "Upright lunge" }, { t: 0.5, label: "Hips rocked forward" }],
+  [
+    { hip: [92, 103], torso: [-92, -90], head: -88, hands: [[118, 101], [120, 101]], feet: [[124, 131], [62, 130]], footAngle: [0, 180] },
+    { hip: [106, 107], torso: [-96, -94], head: -90, hands: [[124, 101], [126, 101]], feet: [[124, 131], [62, 130]], footAngle: [0, 180] },
+  ],
+  undefined,
+  (j) => j.hip,
+);
+
+const seatedLegRaise = floorMove(
+  3,
+  "Sitting tall with one leg straight: the whole straight leg lifts off the floor, then lowers slowly.",
+  [{ t: 0, label: "Leg on the floor" }, { t: 0.5, label: "Leg lifted" }],
+  [
+    { hip: [86, 126], torso: [-100, -96], head: -88, hands: [[70, 131], [72, 131]], feet: [[112, 131], [146, 129]], footAngle: [0, -84], handKind: FLAT },
+    { hip: [86, 126], torso: [-100, -96], head: -88, hands: [[70, 131], [72, 131]], feet: [[112, 131], [143, 112]], footAngle: [0, -100], handKind: FLAT },
+  ],
+  undefined,
+  (j) => j.ankle[1],
+);
+
+const sideLungeRock = floorMove(
+  3.6,
+  "Kneeling on one knee with the other leg out wide: the hips shift over toward the straight leg, then back.",
+  [{ t: 0, label: "Hips over the knee" }, { t: 0.5, label: "Shifted toward the straight leg" }],
+  [
+    { hip: [94, 103], torso: [-90, -90], head: -88, hands: [[98, 100], [100, 100]], feet: [[66, 130], [140, 131]], footAngle: [180, 0] },
+    { hip: [108, 110], torso: [-96, -94], head: -90, hands: [[110, 106], [112, 106]], feet: [[66, 130], [140, 131]], footAngle: [180, 0] },
+  ],
+  undefined,
+  (j) => j.hip,
+);
+
+const ninetyFootLift = floorMove(
+  3,
+  "Sitting in 90/90: the back foot and shin lift off the floor, then lower.",
+  [{ t: 0, label: "90/90 seat" }, { t: 0.5, label: "Back foot lifted" }],
+  [
+    { hip: [96, 126], torso: [-92, -90], head: -88, hands: [[80, 131], [118, 131]], feet: [[120, 130], [36, 130]], footAngle: [0, 180], handKind: FLAT },
+    { hip: [96, 126], torso: [-92, -90], head: -88, hands: [[80, 131], [118, 131]], feet: [[120, 130], [40, 116]], footAngle: [0, 165], handKind: FLAT },
+  ],
+  undefined,
+  (j) => j.ankle[1],
+);
+
+const ninetyKneeLift = floorMove(
+  3,
+  "Sitting in 90/90: the front knee lifts up while the front foot stays down, then lowers.",
+  [{ t: 0, label: "90/90 seat" }, { t: 0.5, label: "Front knee lifted" }],
+  [
+    { hip: [96, 126], torso: [-92, -90], head: -88, hands: [[80, 131], [82, 131]], feet: [[36, 130], [124, 130]], footAngle: [180, 0], handKind: FLAT },
+    { hip: [96, 126], torso: [-96, -92], head: -88, hands: [[80, 131], [82, 131]], feet: [[36, 130], [114, 131]], footAngle: [180, 0], handKind: FLAT },
+  ],
+  undefined,
+  (j) => j.knee[1],
+);
+
+const pigeonBackbend = floorMove(
+  5,
+  "Pigeon: front leg bent in front, back leg long behind. The chest lifts and leans back, head following.",
+  [{ t: 0, label: "Pigeon, chest up" }, { t: 0.5, label: "Leaning back" }],
+  [
+    { hip: [100, 122], torso: [-94, -96], head: -94, hands: [[94, 131], [96, 131]], feet: [[140, 131], [36, 130]], footAngle: [0, 180], handKind: FLAT },
+    { hip: [100, 121], torso: [-100, -122], head: -140, hands: [[86, 131], [88, 131]], feet: [[140, 131], [36, 130]], footAngle: [0, 180], handKind: FLAT },
+  ],
+);
+
+const kneeDrop = floorMove(
+  4,
+  "Lying on the back with knees bent: one knee falls in toward the floor and comes back, then the other.",
+  [{ t: 0, label: "Knees up" }, { t: 0.25, label: "One knee dropped" }, { t: 0.75, label: "Other knee dropped" }],
+  [
+    { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 130], [106, 130]], feet: [[130, 131], [134, 131]], handKind: FLAT },
+    { hip: [104, 125], torso: [180, 180], head: 178, hands: [[104, 130], [106, 130]], feet: [[130, 131], [140, 129]], handKind: FLAT },
+    { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 130], [106, 130]], feet: [[130, 131], [134, 131]], handKind: FLAT },
+    { hip: [104, 125], torso: [180, 180], head: 182, hands: [[104, 130], [106, 130]], feet: [[138, 129], [134, 131]], handKind: FLAT },
+  ],
+);
+
+const sideSitLegLift = floorMove(
+  3,
+  "Sitting on one hip with the back leg straight behind: the back leg lifts up and lowers slowly.",
+  [{ t: 0, label: "Back leg down" }, { t: 0.5, label: "Back leg lifted" }],
+  [
+    { hip: [100, 124], torso: [-78, -84], head: -86, hands: [[122, 131], [124, 131]], feet: [[120, 130], [42, 130]], footAngle: [0, 180], handKind: FLAT },
+    { hip: [100, 123], torso: [-74, -80], head: -84, hands: [[122, 131], [124, 131]], feet: [[120, 130], [46, 108]], footAngle: [0, 200], handKind: FLAT },
+  ],
+  undefined,
+  (j) => j.ankle[1],
+);
+
+const lowLungeQuad = floorMove(
+  5,
+  "Low lunge, back knee down: the hand pulls the back foot toward the glutes and the hips ease forward.",
+  [{ t: 0, label: "Holding the back foot" }, { t: 0.5, label: "Hips forward, deeper stretch" }],
+  [
+    { hip: [98, 104], torso: [-96, -100], head: -92, hands: [[124, 100], [80, 98]], feet: [[128, 131], [80, 100]], footAngle: [0, -60] },
+    { hip: [106, 107], torso: [-98, -104], head: -94, hands: [[130, 102], [82, 100]], feet: [[128, 131], [82, 102]], footAngle: [0, -60] },
+  ],
+);
+
+const kneelToSquat = floorMove(
+  3.8,
+  "From kneeling on one knee, hands behind the head: rise into a wide deep squat, then lower to the other knee.",
+  [{ t: 0, label: "Kneeling" }, { t: 0.5, label: "Deep squat" }],
+  [
+    { hip: [96, 103], torso: [-90, -90], head: -88, hands: [[88, 44], [90, 44]], feet: [[128, 131], [66, 130]], footAngle: [0, 180] },
+    { hip: [92, 112], torso: [-76, -82], head: -86, hands: [[92, 52], [94, 52]], feet: [[114, 133], [106, 133]], footAngle: [0, 0] },
+  ],
+  undefined,
+  (j) => j.hip,
+);
+
+const couchStretch = floorMove(
+  5,
+  "Back knee on the floor against a bench with the shin up it: the chest lifts from leaning forward to upright.",
+  [{ t: 0, label: "Leaning forward" }, { t: 0.5, label: "Chest upright" }],
+  [
+    { hip: [100, 104], torso: [-70, -66], head: -64, hands: [[128, 101], [130, 101]], feet: [[132, 131], [76, 84]], footAngle: [0, -90] },
+    { hip: [98, 103], torso: [-92, -94], head: -90, hands: [[124, 99], [126, 99]], feet: [[132, 131], [76, 84]], footAngle: [0, -90] },
+  ],
+  () => box(50, 78, 24, 55),
+);
+
+const ninetySwitch = floorMove(
+  4.4,
+  "Seated, knees bent: both legs rotate down to one side into 90/90, back through the middle, and over to the other side.",
+  [{ t: 0, label: "Knees up" }, { t: 0.25, label: "90/90 one way" }, { t: 0.75, label: "90/90 the other way" }],
+  [
+    { hip: [92, 126], torso: [-100, -96], head: -88, hands: [[74, 131], [76, 131]], feet: [[120, 131], [124, 131]], handKind: FLAT },
+    { hip: [92, 126], torso: [-96, -92], head: -88, hands: [[74, 131], [76, 131]], feet: [[32, 130], [120, 130]], footAngle: [180, 0], handKind: FLAT },
+    { hip: [92, 126], torso: [-100, -96], head: -88, hands: [[74, 131], [76, 131]], feet: [[120, 131], [124, 131]], handKind: FLAT },
+    { hip: [92, 126], torso: [-96, -92], head: -88, hands: [[74, 131], [76, 131]], feet: [[122, 130], [32, 130]], footAngle: [0, 180], handKind: FLAT },
+  ],
+);
+
 const deadBug: ExerciseAnimation = {
   cycle: 6,
   cue: "Back flat on the floor: one arm reaches overhead as the opposite leg straightens, then switch sides.",
@@ -1341,6 +1504,19 @@ export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "chest-supported-row": chestSupportedRow,
   "forearm-plank": plank,
   "dead-bug": deadBug,
+  "adductor-rock-back": adductorRockBack,
+  "lunge-rock": lungeRock,
+  "seated-straight-leg-raise": seatedLegRaise,
+  "side-lunge-rock": sideLungeRock,
+  "ninety-ninety-foot-lift": ninetyFootLift,
+  "ninety-ninety-knee-lift": ninetyKneeLift,
+  "pigeon-backbend": pigeonBackbend,
+  "supine-knee-drop": kneeDrop,
+  "side-sit-leg-lift": sideSitLegLift,
+  "low-lunge-quad-stretch": lowLungeQuad,
+  "kneel-to-squat": kneelToSquat,
+  "couch-stretch": couchStretch,
+  "ninety-ninety-switch": ninetySwitch,
   "db-standing-calf-raise": standingCalfRaise,
   "db-seated-calf-raise": seatedCalfRaise,
   crunch,

@@ -8,9 +8,33 @@ import { useLayoutEffect, useRef } from "react";
  * tabs that grow when they become active. It sits inside the positioned list of tabs;
  * `activeKey` is the active item's `data-glass` attribute (null hides the highlight).
  */
-export function GlassIndicator({ activeKey, className }: { activeKey: string | null; className?: string }) {
+export function GlassIndicator({
+  activeKey,
+  className,
+  dragX = null,
+  release = 0,
+}: {
+  activeKey: string | null;
+  className?: string;
+  /** while the user drags the pill: its centre, in px from the list's left edge */
+  dragX?: number | null;
+  /** bumped when a drag ends, so the pill glides back even if the tab didn't change */
+  release?: number;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const rect = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // follow the finger while dragging
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const list = el?.parentElement;
+    if (!el || !list || dragX === null || !rect.current) return;
+    const lb = list.getBoundingClientRect();
+    const w = rect.current.w;
+    const x = Math.max(4, Math.min(lb.width - w - 4, dragX - w / 2));
+    rect.current = { ...rect.current, x };
+    el.style.transform = `translate(${x}px, ${rect.current.y}px) scale(1.06, 0.97)`;
+  }, [dragX]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -69,7 +93,7 @@ export function GlassIndicator({ activeKey, className }: { activeKey: string | n
       raf = 0;
       ro.disconnect();
     };
-  }, [activeKey]);
+  }, [activeKey, release]);
 
   return <span ref={ref} aria-hidden="true" className={`glass-pill pointer-events-none absolute left-0 top-0 opacity-0 ${className ?? ""}`} />;
 }

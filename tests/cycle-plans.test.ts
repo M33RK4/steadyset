@@ -1,16 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyChanges } from "../src/lib/domain/changes";
-import { emptyAppData, type AppData, type Plan } from "../src/lib/domain/types";
+import { emptyAppData, type AppData, type DayKind, type Plan, type Weekday } from "../src/lib/domain/types";
+import { seededData, apply } from "./helpers";
+import { uuid } from "../src/lib/util/ids";
 import { BALANCED_TONING_BEGINNER, PUSH_PULL_LEGS_REST } from "../src/lib/data/defaultPlan";
 import { buildDay, currentStreak, makeContext, moveDay, skipDay, upcomingWorkouts } from "../src/lib/calendar/calendar";
 import {
   convertDraftSchedule,
+  copyDraftDay,
   cyclePosition,
   daysOfPlan,
   draftFromPlan,
+  exercisesOfDay,
   instantiateTemplate,
   moveCycleDay,
+  moveDraftDay,
+  newDraft,
   saveDraft,
   validateDraft,
 } from "../src/lib/plans/planOps";
@@ -130,4 +136,46 @@ test("the plan type and cycle start sync to the database and back", () => {
   const back = fromRow<Plan>("plans", row);
   assert.equal(back.schedule, "cycle");
   assert.equal(back.cycleStart, "2026-10-27");
+});
+
+test("moving a day in a weekly plan swaps it with the workout already on that weekday", () => {
+  const { data, planId } = seededData();
+  const d0 = draftFromPlan(data, planId)!;
+  const mon = d0.days.find((d) => d.weekday === 1)!;
+  const wed = d0.days.find((d) => d.weekday === 3)!;
+  const moved = moveDraftDay(d0, mon.id, 3);
+  assert.equal(moved.days.find((d) => d.id === mon.id)!.weekday, 3);
+  assert.equal(moved.days.find((d) => d.id === wed.id)!.weekday, 1);
+  // onto a free weekday it just moves
+  const sun = d0.days.find((d) => d.weekday === 0);
+  const free = [0, 1, 2, 3, 4, 5, 6].find((w) => !d0.days.some((d) => d.weekday === w));
+  if (free !== undefined) assert.equal(moveDraftDay(d0, mon.id, free).days.filter((d) => d.weekday === free).length, 1);
+  assert.equal(moved.days.length, d0.days.length, sun ? "no day lost" : "");
+});
+
+test("copying a day duplicates its exercises with new ids and replaces the target weekday", () => {
+  const { data, planId } = seededData();
+  const d0 = draftFromPlan(data, planId)!;
+  const mon = d0.days.find((d) => d.weekday === 1)!;
+  const copied = copyDraftDay(d0, mon.id, 3);
+  const wed = copied.days.filter((d) => d.weekday === 3);
+  assert.equal(wed.length, 1);
+  assert.equal(wed[0].name, mon.name);
+  assert.notEqual(wed[0].id, mon.id);
+  assert.deepEqual(wed[0].exercises.map((e) => e.exerciseId), mon.exercises.map((e) => e.exerciseId));
+  assert.ok(wed[0].exercises.every((e) => e.planDayId === wed[0].id && !mon.exercises.some((m) => m.id === e.id)));
+  // and it saves cleanly
+  const after = apply(data, saveDraft(data, copied));
+  assert.equal(exercisesOfDay(after, wed[0].id).length, mon.exercises.length);
+});
+
+test("in a cycle, moving a day shifts the others and copying inserts an extra day", () => {
+  let draft = newDraft();
+  draft = { ...draft, plan: { ...draft.plan, name: "PPL", schedule: "cycle", cycleStart: "2026-10-26" } };
+  draft.days = ["Push", "Pull", "Legs", "Rest"].map((name, i) => ({ id: uuid(), planId: draft.plan.id, weekday: i as Weekday, name, kind: (name === "Rest" ? "rest" : "strength") as DayKind, notes: "", optional: false, exercises: [] }));
+  const legs = draft.days[2].id;
+  const moved = moveDraftDay(draft, legs, 0);
+  assert.deepEqual([...moved.days].sort((a, b) => a.weekday - b.weekday).map((d) => d.name), ["Legs", "Push", "Pull", "Rest"]);
+  const copied = copyDraftDay(draft, draft.days[0].id, 4);
+  assert.deepEqual([...copied.days].sort((a, b) => a.weekday - b.weekday).map((d) => d.name), ["Push", "Pull", "Legs", "Rest", "Push"]);
 });

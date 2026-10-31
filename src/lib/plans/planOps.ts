@@ -366,3 +366,40 @@ export function saveSessionAsPlanDay(data: AppData, sessionId: string, opts: { r
   changes.push(upsert("sessions", { ...session, planId: draft.plan.id, planDayId: dayId, planName: draft.plan.name }));
   return { changes, planId: draft.plan.id };
 }
+
+/**
+ * Move a day of a draft to another slot (a weekday, or a place in the cycle). In a weekly plan a
+ * workout already on that weekday swaps places with it; in a cycle the days shift to make room.
+ */
+export function moveDraftDay(draft: PlanDraft, dayId: string, toSlot: number): PlanDraft {
+  const day = draft.days.find((d) => d.id === dayId);
+  if (!day || day.weekday === toSlot) return draft;
+  if (isCycle(draft.plan)) {
+    const days = [...draft.days].sort((a, b) => a.weekday - b.weekday).filter((d) => d.id !== dayId);
+    days.splice(Math.max(0, Math.min(days.length, toSlot)), 0, day);
+    return { ...draft, days: days.map((d, pos) => ({ ...d, weekday: pos as Weekday })) };
+  }
+  const from = day.weekday;
+  return {
+    ...draft,
+    days: draft.days.map((d) => (d.id === dayId ? { ...d, weekday: toSlot as Weekday } : d.weekday === toSlot ? { ...d, weekday: from } : d)),
+  };
+}
+
+/**
+ * Copy a day (with all its exercises) onto another slot. In a weekly plan it replaces the
+ * workout on that weekday; in a cycle it is inserted there as an extra day (at most 7).
+ */
+export function copyDraftDay(draft: PlanDraft, dayId: string, toSlot: number): PlanDraft {
+  const src = draft.days.find((d) => d.id === dayId);
+  if (!src) return draft;
+  const id = uuid();
+  const copy = { ...src, id, weekday: toSlot as Weekday, exercises: src.exercises.map((e) => ({ ...e, id: uuid(), planDayId: id })) };
+  if (isCycle(draft.plan)) {
+    if (draft.days.length >= 7) return draft;
+    const days = [...draft.days].sort((a, b) => a.weekday - b.weekday);
+    days.splice(Math.max(0, Math.min(days.length, toSlot)), 0, copy);
+    return { ...draft, days: days.map((d, pos) => ({ ...d, weekday: pos as Weekday })) };
+  }
+  return { ...draft, days: [...draft.days.filter((d) => d.weekday !== toSlot), copy] };
+}

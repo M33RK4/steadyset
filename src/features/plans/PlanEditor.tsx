@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useApp } from "@/lib/store/AppStore";
-import { convertDraftSchedule, cyclePosition, cycleStartFor, draftFromPlan, isCycle, moveCycleDay, newDraft, saveDraft, validateDraft, type PlanDraft } from "@/lib/plans/planOps";
+import { convertDraftSchedule, copyDraftDay, cyclePosition, cycleStartFor, draftFromPlan, isCycle, moveCycleDay, moveDraftDay, newDraft, saveDraft, validateDraft, type PlanDraft } from "@/lib/plans/planOps";
 import type { DayKind, Exercise, PlanDay, PlanExercise, TargetUnit, Weekday } from "@/lib/domain/types";
-import { orderedWeekdays, WEEKDAY_NAMES } from "@/lib/util/dates";
+import { orderedWeekdays, WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/util/dates";
 import { uuid } from "@/lib/util/ids";
 import { REST_PRESETS } from "@/lib/timer/restTimer";
 import { Badge, Button, EmptyState, Field, IconButton, Segmented, Switch, cx } from "@/components/ui/primitives";
 import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { ExercisePicker } from "./ExercisePicker";
+import { DayOverview, type Slot } from "./DayOverview";
 import { ExerciseName } from "../library/ExerciseSheet";
 import { DAY_KIND_LABEL, useExercises, useToday } from "../common";
 
@@ -41,8 +42,13 @@ export function PlanEditor() {
   const ex = useExercises();
   const today = useToday();
   const isNew = planId === "new";
-  const [draft, setDraft] = useState<PlanDraft | null>(() => (isNew ? { ...newDraft(), plan: { ...newDraft().plan, isActive: data.plans.length === 0 } } : draftFromPlan(data, planId)));
-  const initial = useRef(JSON.stringify(draft));
+  const storeKey = `steadyset:plan-draft:${planId}`;
+  const base = () => (isNew ? { ...newDraft(), plan: { ...newDraft().plan, isActive: data.plans.length === 0 } } : draftFromPlan(data, planId));
+  // unsaved edits from an earlier visit (the app was closed or left) come back automatically
+  const stored = useMemo(() => readStoredDraft(storeKey), [storeKey]);
+  const [restored, setRestored] = useState<number | null>(stored?.savedAt ?? null);
+  const [draft, setDraft] = useState<PlanDraft | null>(() => stored?.draft ?? base());
+  const initial = useRef(JSON.stringify(stored ? base() : draft));
   const [errors, setErrors] = useState<string[]>([]);
   const [picker, setPicker] = useState<string | null>(null); // day id receiving an exercise
 
@@ -58,6 +64,15 @@ export function PlanEditor() {
   }, [data, draft, isNew, planId]);
 
   const dirty = useMemo(() => JSON.stringify(draft) !== initial.current, [draft]);
+
+  useEffect(() => {
+    try {
+      if (draft && dirty) localStorage.setItem(storeKey, JSON.stringify({ savedAt: Date.now(), draft }));
+      else localStorage.removeItem(storeKey);
+    } catch {
+      /* storage unavailable: edits just aren't kept */
+    }
+  }, [draft, dirty, storeKey]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -115,16 +130,20 @@ export function PlanEditor() {
     }
     commit((d) => saveDraft(d, draft));
     initial.current = JSON.stringify(draft);
+    forgetStoredDraft(storeKey);
     toast(isNew ? "Plan created" : "Plan saved", { tone: "success" });
     router.push("/workouts");
   };
 
   const cancel = async () => {
     if (dirty && !(await confirm({ title: "Discard your changes?", body: "Edits to this plan haven't been saved.", confirmLabel: "Discard changes", danger: true }))) return;
+    forgetStoredDraft(storeKey);
+    initial.current = JSON.stringify(draft);
     router.push("/workouts");
   };
 
   const byWeekday = new Map(draft.days.map((d) => [d.weekday, d]));
+  const jumpTo = (dayId: string) => document.getElementById(`day-${dayId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const cycle = isCycle(draft.plan);
   const cycleDays = [...draft.days].sort((a, b) => a.weekday - b.weekday);
   const todayPos = cycle && cycleDays.length ? cyclePosition(draft.plan.cycleStart ?? today, today, cycleDays.length) : 0;
@@ -146,6 +165,28 @@ export function PlanEditor() {
         </button>
         <h1 className="text-3xl flex-1">{isNew ? "Create plan" : "Edit plan"}</h1>
       </div>
+
+      {restored && dirty && (
+        <div role="status" className="rounded-ctl bg-accent-soft text-accent-text p-4 flex flex-wrap items-center gap-3">
+          <Icon name="restore" size={20} />
+          <p className="flex-1 min-w-[200px] text-sm font-semibold">
+            Your unsaved changes from {new Date(restored).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })} were kept. Save the plan to keep them for good.
+          </p>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              forgetStoredDraft(storeKey);
+              const fresh = base();
+              setDraft(fresh);
+              initial.current = JSON.stringify(fresh);
+              setRestored(null);
+            }}
+          >
+            Discard them
+          </Button>
+        </div>
+      )}
 
       {errors.length > 0 && (
         <div role="alert" className="rounded-ctl bg-danger-soft text-danger p-4">
@@ -209,6 +250,16 @@ export function PlanEditor() {
               </label>
             )}
           </div>
+          <DayOverview
+            slots={cycleDays.map((d, i): Slot => ({ slot: i, label: `Day ${i + 1}`, day: d }))}
+            copyTargets={(s) => (cycleDays.length < 7 ? [{ slot: s.slot + 1, label: `As Day ${s.slot + 2} (new)` }, { slot: cycleDays.length, label: `At the end (Day ${cycleDays.length + 1})` }] : [])}
+            onMove={(id, to) => setDraft((d) => d && moveDraftDay(d, id, to))}
+            onCopy={(id, to) => {
+              setDraft((d) => d && copyDraftDay(d, id, to));
+              toast("Day copied");
+            }}
+            onJump={jumpTo}
+          />
           {cycleDays.map((day, i) => (
             <DayEditor
               key={day.id}
@@ -228,8 +279,18 @@ export function PlanEditor() {
             <h2 id="sched-h" className="text-xl">
               Weekly schedule
             </h2>
-            <p className="text-muted text-sm">Assign a workout to any day. Days without a workout are free days.</p>
+            <p className="text-muted text-sm">Move a workout with the arrows or drag it by its handle; copy it to another day with the copy button. Tap a day to edit it below.</p>
           </div>
+          <DayOverview
+            slots={orderedWeekdays(prefs.weekStartsOn).map((wd): Slot => ({ slot: wd, label: WEEKDAY_SHORT[wd], day: byWeekday.get(wd) ?? null }))}
+            copyTargets={(s) => orderedWeekdays(prefs.weekStartsOn).filter((w) => w !== s.slot).map((w) => ({ slot: w, label: `${WEEKDAY_NAMES[w]}${byWeekday.has(w) ? ` (replaces ${byWeekday.get(w)!.name})` : ""}` }))}
+            onMove={(id, to) => setDraft((d) => d && moveDraftDay(d, id, to))}
+            onCopy={(id, to) => {
+              setDraft((d) => d && copyDraftDay(d, id, to));
+              toast(`Copied to ${WEEKDAY_NAMES[to]}`);
+            }}
+            onJump={jumpTo}
+          />
           {orderedWeekdays(prefs.weekStartsOn).map((wd) => {
             const day = byWeekday.get(wd);
             return day ? (
@@ -263,6 +324,24 @@ export function PlanEditor() {
       />
     </div>
   );
+}
+
+function readStoredDraft(key: string): { savedAt: number; draft: PlanDraft } | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    return v && v.draft?.plan && Array.isArray(v.draft.days) ? v : null;
+  } catch {
+    return null;
+  }
+}
+function forgetStoredDraft(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* nothing kept */
+  }
 }
 
 function EmptyDay({ label, onAdd }: { label: string; onAdd: (p: { name: string; kind: DayKind }) => void }) {
@@ -460,7 +539,7 @@ function DayEditor({
   const ex = useExercises();
   const [collapsed, setCollapsed] = useState(false);
   return (
-    <article className="card p-4 space-y-4">
+    <article id={`day-${day.id}`} className="card p-4 space-y-4 scroll-mt-24">
       <div className="flex flex-wrap items-center gap-3">
         <span className="font-semibold w-28">{label}</span>
         <label className="flex-1 min-w-[180px]">
