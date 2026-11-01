@@ -126,6 +126,11 @@ export interface Pose {
   knees?: [Pt, Pt];
   /** With `knees`: where the toes appear (a foot pivoting on its heel looks shorter mid-turn). */
   toes?: [Pt, Pt];
+  /**
+   * Like `knees`, for arms flaring out of the side-on view (a face pull, a reverse fly): where
+   * the elbows appear; the arms are drawn through them and `hands` are then exact.
+   */
+  elbows?: [Pt, Pt];
 }
 
 export const rad = (d: number) => (d * Math.PI) / 180;
@@ -256,8 +261,9 @@ export function joints(p: Pose): Joints {
   const fa = p.footAngle ?? [0, 0];
   const wr = p.wrist ?? [0, 0];
   const handT = [0, 1].map((i) => softTarget(neck, p.hands[i], L.upper + L.fore));
-  const elbow = [0, 1].map((i) => anatomical(neck, handT[i], L.upper, L.fore, -1)) as [Pt, Pt];
-  const hand = [0, 1].map((i) => reach(elbow[i], handT[i], L.fore)) as [Pt, Pt];
+  // arms drawn through given elbows (flared out of the side-on view) or solved as usual
+  const elbow = [0, 1].map((i) => p.elbows?.[i] ?? anatomical(neck, handT[i], L.upper, L.fore, -1)) as [Pt, Pt];
+  const hand = [0, 1].map((i) => (p.elbows ? p.hands[i] : reach(elbow[i], handT[i], L.fore))) as [Pt, Pt];
   const handAngle = [0, 1].map((i) => angleOf(elbow[i], hand[i]) + clamp(wr[i], -75, 75)) as [number, number];
   const grip = [0, 1].map((i) => dir(handAngle[i], 2.8, hand[i])) as [Pt, Pt];
   const footT = [0, 1].map((i) => softTarget(p.hip, p.feet[i], L.thigh + L.shin));
@@ -365,11 +371,18 @@ export function lerpPose(a: Pose, b: Pose, t: number): Pose {
     handKind: t < 0.5 ? a.handKind : b.handKind,
     straight: a.straight,
   };
+  const at = (pa: [Pt, Pt], pb: [Pt, Pt]) => [lerpPt(pa[0], pb[0], t), lerpPt(pa[1], pb[1], t)] as [Pt, Pt];
+  if (a.elbows || b.elbows) {
+    // arms flaring out of the side-on view: elbows and hands glide between where they appear
+    const ja = joints(a);
+    const jb = joints(b);
+    pose.elbows = at(ja.elbow, jb.elbow);
+    pose.hands = at(ja.hand, jb.hand);
+  }
   if (a.knees || b.knees) {
     // legs turning out of the side-on view: knees, ankles and toes glide between where they appear
     const ja = joints(a);
     const jb = joints(b);
-    const at = (pa: [Pt, Pt], pb: [Pt, Pt]) => [lerpPt(pa[0], pb[0], t), lerpPt(pa[1], pb[1], t)] as [Pt, Pt];
     const feet = at(ja.ankle, jb.ankle);
     // a foot turning round pivots on its heel: it swings through toes-up and looks shortest
     // (pointing at the viewer) halfway, instead of flipping over in one frame

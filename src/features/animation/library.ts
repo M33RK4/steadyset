@@ -2,6 +2,7 @@ import type { MuscleId } from "@/lib/data/muscles";
 import {
   add,
   angleOf,
+  dir,
   bodyLayers,
   ease,
   FLOOR,
@@ -9,6 +10,7 @@ import {
   frontJoints,
   frontLayers,
   joints,
+  L,
   keyframes,
   lerpFront,
   lerpPose,
@@ -1514,6 +1516,570 @@ const walkingLunge: ExerciseAnimation = (() => {
   };
 })();
 
+// ---------------------------------------------------------------- back and core additions
+
+/** A point on a pose's upper body: `down` along the chest from the neck, `out` in front of it (negative: behind). */
+function onChest(p: Pose, down: number, out: number): Pt {
+  const neck = dir(p.torso[1], L.torso2, dir(p.torso[0], L.torso1, p.hip));
+  const up = dir(p.torso[1], 1, [0, 0]);
+  return add(add(neck, mul(up, -down)), mul(perp(up), out));
+}
+
+/** Arms folded across the chest: elbows low at the sides of the chest, forearms crossing it. */
+const armsCrossed = (p: Pose): Pose => ({ ...p, hands: [onChest(p, 6.5, 6.5), onChest(p, 6, 7)], elbows: [onChest(p, 18, 5.5), onChest(p, 17.5, 6)] });
+
+/** A bar held across the upper back: hands on the bar behind the neck, elbows down behind it. */
+const barOnBack = (p: Pose): Pose => ({ ...p, hands: [onChest(p, 3.5, -4.6), onChest(p, 3, -4)], elbows: [onChest(p, 15, -7.5), onChest(p, 14.5, -7)] });
+
+/** End of a bar seen end-on: the chrome sleeve (plates sit outside the hands, so they're drawn behind the body). */
+const barEnd = (c: Pt, r = 1.9): Shape[] => [{ k: "circle", c, r, tone: "metal", grad: { kind: "radial", c: add(c, [-0.5, -0.5]), r: r * 1.6, stops: [{ o: 0, tone: "white" }, { o: 1, tone: "metal", shade: -14 }] }, stroke: "line", sw: 0.5 }];
+
+/** Cable station on the right, with a low pulley at floor level; returns the shapes and the pulley. */
+function lowCableRight(k: number): { shapes: Shape[]; low: Pt } {
+  const stack = weightStack(166, 26, { lift: k * 12 });
+  const low: Pt = [150, FLOOR - 9];
+  return {
+    low,
+    shapes: [
+      ...baseRail(140, 196),
+      ...stack.shapes,
+      ...tube([156, FLOOR - 3], [156, 16], 2.8),
+      ...tube([154, 16], [194, 16], 2.4),
+      ...cable([stack.cable, [178, 20], [156, 20], [156, low[1]]]),
+      ...pulley([178, 20], 3.2, k * 200),
+      ...pulley([156, 20], 3.2, k * 200),
+      ...pulley(low, 3.2, k * 200),
+    ],
+  };
+}
+
+/** The same cable station on the left. */
+function lowCableLeft(k: number): { shapes: Shape[]; low: Pt } {
+  const stack = weightStack(4, 26, { lift: k * 12 });
+  const low: Pt = [44, FLOOR - 9];
+  return {
+    low,
+    shapes: [
+      ...baseRail(4, 60),
+      ...stack.shapes,
+      ...tube([44, FLOOR - 3], [44, 16], 2.8),
+      ...tube([6, 16], [46, 16], 2.4),
+      ...cable([stack.cable, [21, 20], [44, 20], [44, low[1]]]),
+      ...pulley([21, 20], 3.2, k * 200),
+      ...pulley([44, 20], 3.2, k * 200),
+      ...pulley(low, 3.2, k * 200),
+    ],
+  };
+}
+
+/** 45° back extension: the hips rest on the pad, ankles under the rollers; the upper body hinges down and back up. */
+const backExtension45: ExerciseAnimation = (() => {
+  // hips about a metre up on the pad, feet on the bench's raised foot platform
+  const legs: Pick<Pose, "hip" | "feet" | "footAngle"> = { hip: [94, 70], feet: [[48, 108], [50, 107]], footAngle: [50, 50] };
+  const top = armsCrossed({ ...legs, torso: [-40, -40], head: -38, hands: [[0, 0], [0, 0]] });
+  const low = armsCrossed({ ...legs, torso: [44, 50], head: 60, hands: [[0, 0], [0, 0]] });
+  const down = unit(sub(legs.feet[1], legs.hip));
+  const front = perp(mul(down, -1));
+  const P = (along: number, out: number): Pt => add(add(legs.hip, mul(down, along)), mul(front, out));
+  return {
+    cycle: 3.2,
+    cue: "Hips on the pad, ankles under the rollers: the upper body bends down from the hips with a flat back, then lifts back to a straight line.",
+    frames: [
+      { t: 0, label: "Straight line" },
+      { t: 0.45, label: "Bent at the hips" },
+    ],
+    at: side(
+      [
+        { pose: top, hold: 0.12, move: 0.4 },
+        { pose: low, hold: 0.1, move: 0.38 },
+      ],
+      (j) => ({
+        back: [
+          shadow(84, 130),
+          ...baseRail(24, 140),
+          // frame: a beam under the legs from the foot platform up to the pad, and two struts
+          ...tube(P(-2, 15), P(60, 15), 2.4),
+          ...tube([124, FLOOR - 3], P(-2, 15), 2.4),
+          ...tube([60, FLOOR - 3], P(30, 15), 2.2),
+          ...tube(P(60, 15), [40, FLOOR - 3], 2.2),
+          ...bracket(P(30, 15), 0, 3),
+          ...padAlong(P(-4, 10.6), P(17, 10.6), 7),
+        ],
+        legs: footplate(j, 1, 16),
+        front: [...tube(P(56, 15), P(54, -4), 1.8), ...roller(P(53, -5.4), 4.2)],
+      }),
+      (j) => j.neck,
+    ),
+  };
+})();
+
+/** Seated back extension machine: leaning forward, the back pushes the pad back until upright. */
+const machineBackExtension: ExerciseAnimation = (() => {
+  const base: Pick<Pose, "hip" | "feet" | "footAngle"> = { hip: [84, 100], feet: [[114, 127], [117, 127]], footAngle: [0, 0] };
+  const forward = armsCrossed({ ...base, torso: [-56, -50], head: -40, hands: [[0, 0], [0, 0]] });
+  const upright = armsCrossed({ ...base, torso: [-96, -100], head: -94, hands: [[0, 0], [0, 0]] });
+  const pivot: Pt = [80, 104];
+  return {
+    cycle: 3.2,
+    cue: "Seated, leaning forward: the upper back pushes the pad back until upright, then lets it return slowly.",
+    frames: [
+      { t: 0, label: "Leaning forward" },
+      { t: 0.45, label: "Pushed back upright" },
+    ],
+    at: side(
+      [
+        { pose: forward, hold: 0.12, move: 0.36 },
+        { pose: upright, hold: 0.12, move: 0.4 },
+      ],
+      (j, k) => {
+        const stack = weightStack(8, 24, { lift: k * 12 });
+        const up = unit(sub(j.neck, j.mid));
+        const back = mul(perp(up), -1);
+        const padC = add(add(j.neck, mul(up, -11)), mul(back, 10.5));
+        return {
+          back: [
+            shadow(90, 160),
+            ...baseRail(6, 150),
+            ...stack.shapes,
+            ...cable([stack.cable, [25, 18], [44, 18], [44, 96], pivot]),
+            ...pulley([25, 20], 3.2, k * 160),
+            ...pulley([44, 96], 3, k * 160),
+            ...tube([44, FLOOR - 3], [44, 14], 2.4),
+            ...tube([22, 14], [48, 14], 2.2),
+            ...tube([86, 110], [86, FLOOR - 3], 2.6),
+            ...tube([128, FLOOR - 3], [124, 120], 2.2),
+            ...pad(60, 104, 42, 7),
+          ],
+          mid: [...tube(pivot, add(padC, mul(back, 4)), 2.2), ...bolt(pivot, 1.4), ...padAlong(add(padC, mul(up, 8)), add(padC, mul(up, -8)), 7)],
+          legs: [...footplate(j, 1, 18), ...tube([108, 104], [108, 90], 1.8), ...roller([108, 89], 4.4)],
+        };
+      },
+      (j) => j.neck,
+    ),
+  };
+})();
+
+/** Romanian deadlift poses (standing → hips back) with the hands on a bar in front of the thighs. */
+const RDL_TOP: Pose = { ...STAND, hands: [[102, 100], [104, 100]], feet: [[98, 133], [104, 133]] };
+const RDL_LOW: Pose = { hip: [84, 78], torso: [-28, -26], head: -18, hands: [[119, 111], [121, 111]], feet: [[98, 133], [104, 133]] };
+
+const barbellRdl: ExerciseAnimation = {
+  cycle: 3.6,
+  cue: "Bar close to the legs: the hips push back as the chest tips forward with a flat back, then drive forward to stand tall.",
+  frames: [
+    { t: 0, label: "Standing tall" },
+    { t: 0.45, label: "Hips back, bar at mid-shin" },
+  ],
+  at: side(
+    [
+      { pose: RDL_TOP, hold: 0.12, move: 0.38 },
+      { pose: RDL_LOW, hold: 0.1, move: 0.4 },
+    ],
+    (j) => ({ back: [shadow(100, 60), ...mat(56, 150)], far: plateFace(j.grip[1], 13), front: barEnd(j.grip[1]) }),
+    (j) => j.grip[1],
+  ),
+};
+
+const cableRdl: ExerciseAnimation = {
+  cycle: 3.6,
+  cue: "Facing the low pulley: hips push back with a flat back as the bar travels toward the floor, then the hips drive forward to stand.",
+  frames: [
+    { t: 0, label: "Standing tall" },
+    { t: 0.45, label: "Hips back, flat back" },
+  ],
+  at: side(
+    [
+      { pose: RDL_TOP, hold: 0.12, move: 0.38 },
+      { pose: RDL_LOW, hold: 0.1, move: 0.4 },
+    ],
+    (j, k) => {
+      const m = lowCableRight(k);
+      return { back: [shadow(110, 170), ...m.shapes], mid: cable([j.grip[1], m.low]), front: [...tube(add(j.grip[1], [0, -0.1]), add(j.grip[1], [0, 0.1]), 1.6), ...barEnd(j.grip[1], 1.7)] };
+    },
+    (j) => j.grip[1],
+  ),
+};
+
+const cablePullThrough: ExerciseAnimation = {
+  cycle: 3.2,
+  cue: "Facing away from the low pulley, rope between the legs: hips push back toward the machine, then drive forward to stand tall.",
+  frames: [
+    { t: 0, label: "Standing tall" },
+    { t: 0.45, label: "Hips back, rope between the legs" },
+  ],
+  at: side(
+    [
+      { pose: { ...STAND, hip: [102, 74], hands: [[103, 118], [105, 118]], feet: [[98, 133], [105, 133]] }, hold: 0.12, move: 0.36 },
+      { pose: { hip: [82, 80], torso: [-34, -30], head: -22, hands: [[96, 108], [98, 108]], feet: [[98, 133], [105, 133]] }, hold: 0.1, move: 0.42 },
+    ],
+    (j, k) => {
+      const m = lowCableLeft(k);
+      const g = j.grip[1];
+      // the rope runs from the pulley, between the legs, to both hands
+      return {
+        back: [shadow(100, 170), ...m.shapes],
+        far: [...cable([m.low, add(g, [-4, 1])]), { k: "line", a: add(g, [-4, 1]), b: g, w: 2.4, tone: "line", op: 0.7 }, { k: "line", a: add(g, [-4, 1]), b: g, w: 1.6, tone: "cable", dash: "1 0.6" }],
+        front: [{ k: "circle", c: add(g, [0.4, 2.6]), r: 1.9, tone: "rubber", stroke: "line", sw: 0.45 }],
+      };
+    },
+    (j) => j.hip,
+  ),
+};
+
+const goodMorningTop = barOnBack({ hip: [100, 74], torso: [-88, -88], head: -86, hands: [[0, 0], [0, 0]], feet: [[96, 133], [102, 133]] });
+const goodMorningLow = barOnBack({ hip: [84, 79], torso: [-14, -12], head: -4, hands: [[0, 0], [0, 0]], feet: [[96, 133], [102, 133]] });
+const barOf = (j: Joints): Pt => add(j.neck, mul(perp(unit(sub(j.neck, j.mid))), -4.4));
+
+const barbellGoodMorning: ExerciseAnimation = {
+  cycle: 3.6,
+  cue: "Bar across the upper back: the hips push back as the chest bows forward with a flat back, then the hips drive forward to stand.",
+  frames: [
+    { t: 0, label: "Standing tall" },
+    { t: 0.45, label: "Bowed forward, flat back" },
+  ],
+  at: side(
+    [
+      { pose: goodMorningTop, hold: 0.12, move: 0.4 },
+      { pose: goodMorningLow, hold: 0.1, move: 0.38 },
+    ],
+    (j) => ({ back: [shadow(100, 70), ...mat(56, 150)], far: plateFace(barOf(j), 11), mid: barEnd(barOf(j)) }),
+    (j) => j.neck,
+  ),
+};
+
+const cableGoodMorning: ExerciseAnimation = {
+  cycle: 3.6,
+  cue: "Facing away from the low pulley with the bar across the upper back: bow forward from the hips with a flat back, then stand tall.",
+  frames: [
+    { t: 0, label: "Standing tall" },
+    { t: 0.45, label: "Bowed forward, flat back" },
+  ],
+  at: side(
+    [
+      { pose: { ...goodMorningTop, hip: [108, 74], feet: [[104, 133], [110, 133]], hands: goodMorningTop.hands.map((h) => add(h, [8, 0])) as [Pt, Pt], elbows: goodMorningTop.elbows!.map((h) => add(h, [8, 0])) as [Pt, Pt] }, hold: 0.12, move: 0.4 },
+      { pose: { ...goodMorningLow, hip: [92, 79], feet: [[104, 133], [110, 133]], hands: goodMorningLow.hands.map((h) => add(h, [8, 0])) as [Pt, Pt], elbows: goodMorningLow.elbows!.map((h) => add(h, [8, 0])) as [Pt, Pt] }, hold: 0.1, move: 0.38 },
+    ],
+    (j, k) => {
+      const m = lowCableLeft(k);
+      return { back: [shadow(100, 170), ...m.shapes, ...cable([m.low, barOf(j)])], mid: [...tube(add(barOf(j), [0, -0.1]), add(barOf(j), [0, 0.1]), 1.5), ...barEnd(barOf(j), 1.7)] };
+    },
+    (j) => j.neck,
+  ),
+};
+
+const superman: ExerciseAnimation = {
+  cycle: 4,
+  cue: "Face down, arms overhead: arms, chest and legs lift off the floor together, hold for a moment, then lower slowly.",
+  frames: [
+    { t: 0, label: "Lying face down" },
+    { t: 0.45, label: "Arms, chest and legs lifted" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [90, 126], torso: [0, 0], head: 6, hands: [[186, 129], [188, 129]], feet: [[29, 128], [31, 128]], footAngle: [176, 176] }, hold: 0.14, move: 0.26 },
+      { pose: { hip: [90, 126], torso: [-4, -15], head: -16, hands: [[180, 110], [182, 110]], feet: [[32, 113], [34, 113]], footAngle: [164, 164] }, hold: 0.3, move: 0.3 },
+    ],
+    () => ({ back: [shadow(104, 180), ...mat(10, 196)] }),
+    (j) => j.hand[1],
+  ),
+};
+
+const birdDog: ExerciseAnimation = (() => {
+  const base: Pose = { hip: [70, 101], torso: [-17, -17], head: -12, hands: [[111, 131], [113, 131]], feet: [[40, 131], [42, 131]], footAngle: [180, 180], handKind: ["flat", "flat"], wrist: [-75, -75] };
+  const nearArmFarLeg: Pose = { ...base, hands: [[111, 131], [160, 87]], feet: [[9, 100], [42, 131]], footAngle: [176, 180] };
+  const farArmNearLeg: Pose = { ...base, hands: [[158, 87], [113, 131]], feet: [[40, 131], [11, 100]], footAngle: [180, 176] };
+  return {
+    cycle: 6,
+    cue: "On hands and knees with a flat back: one arm reaches forward as the opposite leg reaches back, hold, return, then switch sides.",
+    frames: [
+      { t: 0, label: "Hands and knees" },
+      { t: 0.22, label: "Near arm + far leg reach" },
+      { t: 0.72, label: "Switch sides" },
+    ],
+    at: side(
+      [
+        { pose: base, hold: 0.08, move: 0.17 },
+        { pose: nearArmFarLeg, hold: 0.08, move: 0.17 },
+        { pose: base, hold: 0.08, move: 0.17 },
+        { pose: farArmNearLeg, hold: 0.08, move: 0.17 },
+      ],
+      () => ({ back: [shadow(90, 170), ...mat(4, 180)] }),
+    ),
+  };
+})();
+
+const pullUp: ExerciseAnimation = {
+  cycle: 3.4,
+  viewBox: "0 -44 200 194",
+  cue: "Hanging with palms facing away: pull the chest up toward the bar by driving the elbows down, then lower to a full hang.",
+  frames: [
+    { t: 0, label: "Full hang" },
+    { t: 0.45, label: "Chest to the bar" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [94, 62], torso: [-93, -91], head: -88, hands: [[99, -24], [101, -24]], feet: [[78, 108], [80, 106]], footAngle: [50, 50] }, hold: 0.14, move: 0.36 },
+      { pose: { hip: [86, 30], torso: [-80, -82], head: -94, hands: [[99, -24], [101, -24]], feet: [[70, 74], [72, 72]], footAngle: [50, 50] }, hold: 0.1, move: 0.4 },
+    ],
+    () => ({
+      back: [
+        shadow(92, 70),
+        ...mat(56, 140),
+        ...tube([160, FLOOR - 3], [160, -36], 3),
+        ...tube([100, -36], [164, -36], 2.6),
+        ...tube([100, -36], [100, -26], 2),
+        foot(160, 14),
+      ],
+      mid: [{ k: "circle", c: [100, -24], r: 2.6, fill: true, tone: "metal", stroke: "line", sw: 0.65 }],
+    }),
+    (j) => j.neck,
+  ),
+};
+
+const singleArmRow: ExerciseAnimation = {
+  cycle: 3,
+  cue: "One knee and hand on the bench, back flat: the free arm rows the dumbbell up toward the hip, then lowers it to a straight arm.",
+  frames: [
+    { t: 0, label: "Arm hanging straight" },
+    { t: 0.45, label: "Dumbbell at the hip" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [82, 73], torso: [-8, -8], head: -2, hands: [[124, 101], [127, 114]], feet: [[54, 101], [68, 133]], footAngle: [180, 0], handKind: ["flat", "fist"], wrist: [-75, 0] }, hold: 0.12, move: 0.34 },
+      { pose: { hip: [82, 73], torso: [-9, -10], head: -3, hands: [[124, 101], [101, 77]], feet: [[54, 101], [68, 133]], footAngle: [180, 0], handKind: ["flat", "fist"], wrist: [-75, 0] }, hold: 0.12, move: 0.42 },
+    ],
+    (j) => ({ back: [shadow(96, 130), ...bench(40, 138, 104, 6)], front: dumbbell(j.grip[1], 0, 0.95) }),
+    (j) => j.grip[1],
+  ),
+};
+
+const facePull: ExerciseAnimation = (() => {
+  const stand: Pick<Pose, "hip" | "torso" | "head" | "feet"> = { hip: [94, 74], torso: [-90, -90], head: -88, feet: [[90, 133], [97, 133]] };
+  return {
+    cycle: 3,
+    cue: "Rope at face height: pull it toward the forehead with the elbows high and wide, squeeze, then straighten the arms toward the machine.",
+    frames: [
+      { t: 0, label: "Arms straight" },
+      { t: 0.45, label: "Rope at the face, elbows wide" },
+    ],
+    at: side(
+      [
+        { pose: { ...stand, hands: [[138, 26], [140, 26]] }, hold: 0.12, move: 0.34 },
+        { pose: { ...stand, hands: [[101, 20], [103, 20]], elbows: [[80, 27], [82, 27]] }, hold: 0.12, move: 0.42 },
+      ],
+      (j, k) => {
+        const stack = weightStack(168, 24, { lift: k * 12 });
+        const clamp: Pt = [146, 26];
+        const rope = (h: Pt): Shape[] => [
+          { k: "line", a: clamp, b: h, w: 3, tone: "line", op: 0.7 },
+          { k: "line", a: clamp, b: h, w: 2, tone: "cable", dash: "1 0.6" },
+          { k: "circle", c: add(h, [-2.4, 0.6]), r: 2.1, fill: true, tone: "rubber", stroke: "line", sw: 0.5 },
+        ];
+        return {
+          back: [
+            shadow(110, 160),
+            ...baseRail(140, 196),
+            ...stack.shapes,
+            ...tube([156, FLOOR - 3], [156, 10], 3),
+            ...tube([154, 10], [194, 10], 2.4),
+            ...cable([stack.cable, [180, 14], [156, 14], [156, 26], clamp]),
+            ...pulley([180, 14], 3.2, k * 200),
+            ...pulley([156, 26], 3.2, k * 200),
+            ...mat(60, 136),
+          ],
+          far: rope(j.grip[0]),
+          front: [...rope(j.grip[1]), { k: "rect", x: clamp[0] - 1.6, y: clamp[1] - 1.7, w: 3.4, h: 3.4, rx: 0.8, fill: true, tone: "metal", stroke: "line", sw: 0.5 }],
+        };
+      },
+      (j) => j.grip[1],
+    ),
+  };
+})();
+
+const wideGripRow: ExerciseAnimation = {
+  cycle: 3.2,
+  cue: "Wide overhand grip: pull the bar to the lower chest with the elbows flaring out to the sides, squeeze, then straighten the arms.",
+  frames: [
+    { t: 0, label: "Arms straight" },
+    { t: 0.45, label: "Bar at the chest, elbows wide" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [66, 112], torso: [-84, -84], head: -84, hands: [[113, 80], [115, 80]], feet: [[122, 122], [125, 122]], footAngle: [-70, -70] }, hold: 0.12, move: 0.33 },
+      { pose: { hip: [66, 112], torso: [-92, -94], head: -90, hands: [[72, 77], [74, 77]], elbows: [[50, 72], [52, 72]], feet: [[122, 122], [125, 122]], footAngle: [-70, -70] }, hold: 0.12, move: 0.43 },
+    ],
+    (j, k) => {
+      const stack = weightStack(164, 30, { lift: k * 14 });
+      const g = j.grip[1];
+      return {
+        back: [
+          shadow(100, 180),
+          ...baseRail(20, 194),
+          ...stack.shapes,
+          ...tube([148, FLOOR - 3], [148, 20], 2.6),
+          ...tube([146, 20], [192, 20], 2.4),
+          ...cable([[g[0] + 1, g[1]], [146, 96], [146, 24], [177, 24], stack.cable]),
+          ...pulley([146, 96], 3.4, -k * 160),
+          ...pulley([146, 24], 3.2, -k * 160),
+          ...pulley([177, 24], 3.2, -k * 160),
+          ...bench(26, 104, 117, 6),
+          ...tube([132, FLOOR - 3], [132, 104], 2.2),
+        ],
+        legs: footplate(j, 1, 20),
+        front: barEnd(g, 2),
+      };
+    },
+    (j) => j.grip[1],
+  ),
+};
+
+/**
+ * Reverse pec deck, seen from the front with the chest against the pad: the straight arms sweep
+ * from in front of the body (pointing at the viewer, so they look short) out to the sides.
+ */
+const reversePecDeck: ExerciseAnimation = (() => {
+  const base = frontJoints({ arm: 90, elbowBend: 0, spread: 0, seated: true });
+  const y = base.shoulders[0][1];
+  const steps = [
+    { pose: { arm: -12, elbowBend: 0, spread: 0, seated: true }, hold: 0.12, move: 0.34 },
+    { pose: { arm: 88, elbowBend: 0, spread: 0, seated: true }, hold: 0.12, move: 0.42 },
+  ];
+  const poseAt = keyframes(lerpFront, steps);
+  // `arm` here is how far each arm has swung round from straight ahead (0°) to out to the side (90°)
+  const armsAt = (swing: number): Pick<FrontJoints, "elbows" | "hands"> => {
+    const s = Math.sin(rad(swing));
+    const sh = base.shoulders;
+    return {
+      elbows: [[sh[0][0] - 23 * s, y + 1], [sh[1][0] + 23 * s, y + 1]],
+      hands: [[sh[0][0] - 44 * s, y + 2], [sh[1][0] + 44 * s, y + 2]],
+    };
+  };
+  const path = guide(Array.from({ length: 12 }, (_, i): Pt => [base.shoulders[1][0] + 44 * Math.sin(rad(lerp(-12, 88, i / 11))), y - 9]));
+  return {
+    cycle: 3,
+    viewBox: "0 0 200 150",
+    cue: "Seen from the front, chest on the pad: the straight arms sweep from in front out to the sides, squeeze, then come back slowly.",
+    frames: [
+      { t: 0, label: "Arms in front" },
+      { t: 0.45, label: "Arms out to the sides" },
+    ],
+    at: (t: number, muscles: MuscleId[] = []): Shape[] => {
+      const { pose, k } = poseAt(t);
+      const j: FrontJoints = { ...base, ...armsAt(pose.arm) };
+      const b = frontLayers(j, muscles, k);
+      const stack = weightStack(176, 30, { lift: k * 12, w: 18 });
+      // levers hang from a pivot above the head down to vertical handles held in each hand
+      const levers = j.hands.flatMap((h): Shape[] => [...tube([100, 16], [h[0], y - 8], 1.9), ...tube([h[0], y - 8], [h[0], y + 7], 1.6), ...grip([h[0], y + 2], 90, 9)]);
+      return [
+        ...stage(),
+        shadow(100, 150),
+        ...stack.shapes,
+        ...tube([100, FLOOR - 3], [100, 10], 3.4),
+        ...tube([60, 10], [186, 10], 2.6),
+        ...cable([stack.cable, [184, 14], [104, 14]]),
+        ...tube([70, FLOOR - 3], [130, FLOOR - 3], 2.2),
+        foot(72),
+        foot(128),
+        ...pad(76, 92, 48, 8, 3),
+        ...b.legs,
+        ...b.shorts,
+        ...b.shirt,
+        ...pad(80, 62, 40, 32, 6),
+        ...b.head,
+        ...b.sleeves,
+        ...b.arms,
+        ...levers,
+        ...pulley([100, 16], 3.4, k * 90),
+        ...b.glow,
+        ...path,
+      ];
+    },
+  };
+})();
+
+const reverseCrunch: ExerciseAnimation = {
+  cycle: 3,
+  cue: "Lying on the back with the knees bent and lifted: the hips curl up off the floor as the knees come toward the chest, then lower slowly.",
+  frames: [
+    { t: 0, label: "Knees over the hips" },
+    { t: 0.45, label: "Hips curled up" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [104, 125], torso: [180, 180], head: 180, hands: [[106, 131], [108, 131]], feet: [[132, 96], [134, 95]], footAngle: [-30, -30], handKind: ["flat", "flat"] }, hold: 0.12, move: 0.34 },
+      { pose: { hip: [110, 117], torso: [164, 180], head: 182, hands: [[106, 131], [108, 131]], feet: [[125, 86], [127, 85]], footAngle: [-50, -50], handKind: ["flat", "flat"] }, hold: 0.1, move: 0.44 },
+    ],
+    () => ({ back: [shadow(96, 160), ...mat(14, 176)] }),
+    (j) => j.knee[1],
+  ),
+};
+
+/** High plank: arms straight, one line from head to heels, breathing. */
+const highPlank: ExerciseAnimation = {
+  cycle: 4,
+  cue: "Hold still on straight arms: one straight line from head to heels, hips neither sagging nor piked.",
+  frames: [{ t: 0, label: "Straight-line hold" }],
+  at: (t, muscles = []) => {
+    const breathe = Math.sin(t * Math.PI * 2) * 0.6;
+    const pose: Pose = { hip: [85, 104 + breathe * 0.4], torso: [-24, -24], head: -18, hands: [[123, 131], [125, 131]], feet: [[30, 127], [32, 127]], handKind: ["flat", "flat"], footAngle: [100, 100], wrist: [-75, -75] };
+    const j = joints(pose);
+    const b = bodyLayers(j, muscles, 0.7 + breathe * 0.3);
+    return [
+      ...stage(),
+      shadow(90, 150),
+      ...mat(14, 172),
+      ...b.farArm,
+      ...b.farLeg,
+      ...b.trunk,
+      ...b.nearLeg,
+      ...b.nearArm,
+      ...b.glow,
+      { k: "line", a: [j.ankle[1][0] - 4, j.ankle[1][1] - 9], b: [j.head[0] + 6, j.head[1] - 9], w: 1.2, tone: "accent", dash: "3 3", op: 0.9 },
+    ];
+  },
+};
+
+const reversePlank: ExerciseAnimation = {
+  cycle: 5,
+  cue: "Sitting with the hands behind the hips: the hips lift until the body is straight from shoulders to heels, hold, then lower.",
+  frames: [
+    { t: 0, label: "Sitting, hands behind" },
+    { t: 0.4, label: "Hips lifted: straight line" },
+  ],
+  at: side(
+    [
+      { pose: { hip: [104, 126], torso: [-128, -130], head: -112, hands: [[68, 131], [70, 131]], feet: [[160, 129], [162, 129]], footAngle: [-60, -60], handKind: ["flat", "flat"], wrist: [-75, -75] }, hold: 0.12, move: 0.26 },
+      { pose: { hip: [109, 106], torso: [-156, -156], head: -164, hands: [[68, 131], [70, 131]], feet: [[160, 129], [162, 129]], footAngle: [-60, -60], handKind: ["flat", "flat"], wrist: [-75, -75] }, hold: 0.34, move: 0.28 },
+    ],
+    () => ({ back: [shadow(110, 160), ...mat(30, 190)] }),
+    (j) => j.hip,
+  ),
+};
+
+const slowMountainClimber: ExerciseAnimation = (() => {
+  const plank: Pose = { hip: [85, 103], torso: [-24, -24], head: -18, hands: [[123, 131], [125, 131]], feet: [[30, 127], [32, 127]], handKind: ["flat", "flat"], footAngle: [100, 100], wrist: [-75, -75] };
+  const nearIn: Pose = { ...plank, hip: [86, 100], torso: [-21, -21], feet: [[30, 127], [86, 121]], footAngle: [100, 112], lift: [0, 2] };
+  const farIn: Pose = { ...plank, hip: [86, 100], torso: [-21, -21], feet: [[84, 121], [32, 127]], footAngle: [112, 100], lift: [2, 0] };
+  return {
+    cycle: 4,
+    cue: "From a high plank, one knee draws slowly in toward the chest and back, then the other, with the hips steady.",
+    frames: [
+      { t: 0, label: "High plank" },
+      { t: 0.22, label: "Near knee to the chest" },
+      { t: 0.72, label: "Other knee" },
+    ],
+    at: side(
+      [
+        { pose: { ...plank, lift: [0, 5] }, hold: 0.06, move: 0.19 },
+        { pose: nearIn, hold: 0.06, move: 0.19 },
+        { pose: { ...plank, lift: [5, 0] }, hold: 0.06, move: 0.19 },
+        { pose: farIn, hold: 0.06, move: 0.19 },
+      ],
+      () => ({ back: [shadow(90, 150), ...mat(14, 172)] }),
+    ),
+  };
+})();
+
 /** Generic figure for custom exercises: a calm standing pose, clearly not a movement demo. */
 const generic: ExerciseAnimation = {
   cycle: 4,
@@ -1579,6 +2145,24 @@ export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "db-reverse-wrist-curl": wristCurl(true),
   "farmers-carry": farmersCarry,
   "db-walking-lunge": walkingLunge,
+  "back-extension-45": backExtension45,
+  "machine-back-extension": machineBackExtension,
+  "barbell-romanian-deadlift": barbellRdl,
+  "cable-romanian-deadlift": cableRdl,
+  "cable-pull-through": cablePullThrough,
+  "barbell-good-morning": barbellGoodMorning,
+  "cable-good-morning": cableGoodMorning,
+  superman,
+  "bird-dog": birdDog,
+  "pull-up": pullUp,
+  "db-single-arm-row": singleArmRow,
+  "cable-face-pull": facePull,
+  "wide-grip-cable-row": wideGripRow,
+  "reverse-pec-deck": reversePecDeck,
+  "reverse-crunch": reverseCrunch,
+  "high-plank": highPlank,
+  "reverse-plank": reversePlank,
+  "slow-mountain-climber": slowMountainClimber,
   generic,
 };
 
