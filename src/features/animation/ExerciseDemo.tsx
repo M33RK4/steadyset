@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { animationFor, type ExerciseAnimation } from "./library";
 import { withBody, type Shape } from "./figure";
-import { motionRuns, shapesToSvg } from "./render";
+import { motionRuns, patchSvg, shapesToSvg } from "./render";
 import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
 import { musclesFor, type MuscleId } from "@/lib/data/muscles";
 import { Icon } from "@/components/ui/Icon";
@@ -28,16 +28,17 @@ function AnimatedFigure({ anim, muscles, playing, viewBox, label }: { anim: Exer
   useEffect(() => {
     const svg = ref.current;
     if (!svg) return;
-    // parts that never move are drawn once, in their own groups; each frame only replaces the
+    // parts that never move are drawn once, in their own groups; each frame only updates the
     // groups that move (same drawing order, so layering is unchanged)
     const runs = motionRuns((t) => anim.at(t, muscles));
     const first = anim.at(progress.current, muscles);
     svg.innerHTML = runs.map(([a, b], r) => `<g>${shapesToSvg(first.slice(a, b), `${id}r${r}`)}</g>`).join("");
     const groups = Array.from(svg.children) as SVGGElement[];
+    // each frame only updates what changed (positions and outlines), not the whole picture
     const draw = (t: number) => {
       const shapes = anim.at(t, muscles);
       runs.forEach(([a, b, moves], r) => {
-        if (moves) groups[r].innerHTML = shapesToSvg(shapes.slice(a, b), `${id}r${r}`);
+        if (moves) patchSvg(groups[r], shapes.slice(a, b), `${id}r${r}`);
       });
     };
     if (!playing) {

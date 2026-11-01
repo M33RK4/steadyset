@@ -56,13 +56,6 @@ export function shade(t: Tone, amt = 0): string {
 // one decimal is a third of a pixel at the size demos are shown — plenty, and keeps the markup small
 const n = (x: number) => (Math.round(x * 10) / 10).toString();
 
-function gradSvg(id: string, g: Grad): string {
-  const stops = g.stops.map((s) => `<stop offset="${n(s.o)}" style="stop-color:${shade(s.tone, s.shade ?? 0)};stop-opacity:${s.op ?? 1}"/>`).join("");
-  if (g.kind === "linear") return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${n(g.a[0])}" y1="${n(g.a[1])}" x2="${n(g.b[0])}" y2="${n(g.b[1])}">${stops}</linearGradient>`;
-  const f = g.f ?? g.c;
-  return `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${n(g.c[0])}" cy="${n(g.c[1])}" r="${n(g.r)}" fx="${n(f[0])}" fy="${n(f[1])}">${stops}</radialGradient>`;
-}
-
 /**
  * Splits a scene into runs of shapes that never change during the animation (the room, the parts
  * of a machine that don't move) and runs that do, keeping the drawing order. Still runs are drawn
@@ -83,51 +76,112 @@ export function motionRuns(sample: (t: number) => Shape[]): [number, number, boo
   return runs;
 }
 
-/** SVG markup (defs + elements) for a list of shapes. `id` keeps gradient ids unique per picture. */
-export function shapesToSvg(shapes: Shape[], id: string): string {
-  let defs = "";
-  let body = "";
-  let gi = 0;
+/** One SVG element: tag, attributes in order, and child elements (gradient stops) or text. */
+interface El {
+  tag: string;
+  at: [string, string][];
+  kids?: El[];
+  text?: string;
+}
+
+/** The SVG elements (a <defs> of gradients first, if any) for a list of shapes. */
+function shapeEls(shapes: Shape[], id: string): El[] {
+  const defs: El[] = [];
+  const body: El[] = [];
   for (const s of shapes) {
+    // fully faded out (kept in the list so a scene always has the same shapes)
+    if (s.op === 0) continue;
     let paint = shade(s.tone, s.shade ?? 0);
     if (s.grad) {
-      const gid = `${id}g${gi++}`;
-      defs += gradSvg(gid, s.grad);
+      const gid = `${id}g${defs.length}`;
+      defs.push(gradEl(gid, s.grad));
       paint = `url(#${gid})`;
     }
-    const op = s.op !== undefined && s.op < 1 ? ` opacity="${n(s.op)}"` : "";
-    const outline = s.stroke ? ` stroke="${shade(s.stroke, s.strokeShade ?? 0)}" stroke-width="${n(s.sw ?? 0.6)}" stroke-linejoin="round"` : "";
+    const op: [string, string][] = s.op !== undefined && s.op < 1 ? [["opacity", n(s.op)]] : [];
+    const outline: [string, string][] = s.stroke ? [["stroke", shade(s.stroke, s.strokeShade ?? 0)], ["stroke-width", n(s.sw ?? 0.6)], ["stroke-linejoin", "round"]] : [];
+    const dash: [string, string][] = "dash" in s && s.dash ? [["stroke-dasharray", s.dash]] : [];
+    const rotate = (r: number | undefined, x: number, y: number): [string, string][] => (r ? [["transform", `rotate(${n(r)} ${n(x)} ${n(y)})`]] : []);
+    const round: [string, string][] = [["stroke-linecap", "round"], ["stroke-linejoin", "round"]];
     switch (s.k) {
       case "line":
-        body += `<line x1="${n(s.a[0])}" y1="${n(s.a[1])}" x2="${n(s.b[0])}" y2="${n(s.b[1])}" stroke="${paint}" stroke-width="${n(s.w)}" stroke-linecap="${s.cap ?? "round"}"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}${op}/>`;
+        body.push({ tag: "line", at: [["x1", n(s.a[0])], ["y1", n(s.a[1])], ["x2", n(s.b[0])], ["y2", n(s.b[1])], ["stroke", paint], ["stroke-width", n(s.w)], ["stroke-linecap", s.cap ?? "round"], ...dash, ...op] });
         break;
-      case "circle":
-        body += s.fill === false
-          ? `<circle cx="${n(s.c[0])}" cy="${n(s.c[1])}" r="${n(s.r)}" fill="none" stroke="${paint}" stroke-width="${n(s.w ?? 1)}"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}${op}/>`
-          : `<circle cx="${n(s.c[0])}" cy="${n(s.c[1])}" r="${n(s.r)}" fill="${paint}"${outline}${op}/>`;
+      case "circle": {
+        const c: [string, string][] = [["cx", n(s.c[0])], ["cy", n(s.c[1])], ["r", n(s.r)]];
+        body.push({ tag: "circle", at: s.fill === false ? [...c, ["fill", "none"], ["stroke", paint], ["stroke-width", n(s.w ?? 1)], ...dash, ...op] : [...c, ["fill", paint], ...outline, ...op] });
         break;
+      }
       case "ellipse":
-        body += `<ellipse cx="${n(s.c[0])}" cy="${n(s.c[1])}" rx="${n(s.rx)}" ry="${n(s.ry)}"${s.rot ? ` transform="rotate(${n(s.rot)} ${n(s.c[0])} ${n(s.c[1])})"` : ""} fill="${paint}"${outline}${op}/>`;
+        body.push({ tag: "ellipse", at: [["cx", n(s.c[0])], ["cy", n(s.c[1])], ["rx", n(s.rx)], ["ry", n(s.ry)], ...rotate(s.rot, s.c[0], s.c[1]), ["fill", paint], ...outline, ...op] });
         break;
       case "rect": {
-        const tr = s.rot ? ` transform="rotate(${n(s.rot)} ${n(s.cx ?? s.x + s.w / 2)} ${n(s.cy ?? s.y + s.h / 2)})"` : "";
-        body += s.fill === false
-          ? `<rect x="${n(s.x)}" y="${n(s.y)}" width="${n(s.w)}" height="${n(s.h)}" rx="${n(s.rx ?? 0)}" fill="none" stroke="${paint}" stroke-width="${n(s.sw ?? 0.6)}"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}${tr}${op}/>`
-          : `<rect x="${n(s.x)}" y="${n(s.y)}" width="${n(s.w)}" height="${n(s.h)}" rx="${n(s.rx ?? 0)}" fill="${paint}"${outline}${tr}${op}/>`;
+        const r: [string, string][] = [["x", n(s.x)], ["y", n(s.y)], ["width", n(s.w)], ["height", n(s.h)], ["rx", n(s.rx ?? 0)]];
+        const tr = rotate(s.rot, s.cx ?? s.x + s.w / 2, s.cy ?? s.y + s.h / 2);
+        body.push({ tag: "rect", at: s.fill === false ? [...r, ["fill", "none"], ["stroke", paint], ["stroke-width", n(s.sw ?? 0.6)], ...dash, ...tr, ...op] : [...r, ["fill", paint], ...outline, ...tr, ...op] });
         break;
       }
       case "path":
-        body += s.fill
-          ? `<path d="${s.d}" fill="${paint}"${outline}${op}/>`
-          : `<path d="${s.d}" fill="none" stroke="${paint}" stroke-width="${n(s.w)}" stroke-linecap="round" stroke-linejoin="round"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}${op}/>`;
+        body.push({ tag: "path", at: s.fill ? [["d", s.d], ["fill", paint], ...outline, ...op] : [["d", s.d], ["fill", "none"], ["stroke", paint], ["stroke-width", n(s.w)], ...round, ...dash, ...op] });
         break;
       case "poly":
-        body += `<polyline points="${s.pts.map((p) => `${n(p[0])},${n(p[1])}`).join(" ")}" fill="none" stroke="${paint}" stroke-width="${n(s.w)}" stroke-linecap="round" stroke-linejoin="round"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}${op}/>`;
+        body.push({ tag: "polyline", at: [["points", s.pts.map((p) => `${n(p[0])},${n(p[1])}`).join(" ")], ["fill", "none"], ["stroke", paint], ["stroke-width", n(s.w)], ...round, ...dash, ...op] });
         break;
       case "text":
-        body += `<text x="${n(s.at[0])}" y="${n(s.at[1])}" font-size="${n(s.size)}" font-weight="${s.weight ?? 700}" text-anchor="${s.anchor ?? "middle"}" font-family="var(--body-font)" fill="${paint}"${s.rot ? ` transform="rotate(${n(s.rot)} ${n(s.at[0])} ${n(s.at[1])})"` : ""}${op}>${s.text}</text>`;
+        body.push({
+          tag: "text",
+          at: [["x", n(s.at[0])], ["y", n(s.at[1])], ["font-size", n(s.size)], ["font-weight", String(s.weight ?? 700)], ["text-anchor", s.anchor ?? "middle"], ["font-family", "var(--body-font)"], ["fill", paint], ...rotate(s.rot, s.at[0], s.at[1]), ...op],
+          text: s.text,
+        });
         break;
     }
   }
-  return defs ? `<defs>${defs}</defs>${body}` : body;
+  return defs.length ? [{ tag: "defs", at: [], kids: defs }, ...body] : body;
+}
+
+function gradEl(id: string, g: Grad): El {
+  const kids = g.stops.map((s): El => ({ tag: "stop", at: [["offset", n(s.o)], ["style", `stop-color:${shade(s.tone, s.shade ?? 0)};stop-opacity:${s.op ?? 1}`]] }));
+  const units: [string, string] = ["gradientUnits", "userSpaceOnUse"];
+  if (g.kind === "linear") return { tag: "linearGradient", at: [["id", id], units, ["x1", n(g.a[0])], ["y1", n(g.a[1])], ["x2", n(g.b[0])], ["y2", n(g.b[1])]], kids };
+  const f = g.f ?? g.c;
+  return { tag: "radialGradient", at: [["id", id], units, ["cx", n(g.c[0])], ["cy", n(g.c[1])], ["r", n(g.r)], ["fx", n(f[0])], ["fy", n(f[1])]], kids };
+}
+
+const markup = (e: El): string => {
+  const attrs = e.at.map(([k, v]) => ` ${k}="${v}"`).join("");
+  if (e.kids) return `<${e.tag}${attrs}>${e.kids.map(markup).join("")}</${e.tag}>`;
+  return e.text !== undefined ? `<${e.tag}${attrs}>${e.text}</${e.tag}>` : `<${e.tag}${attrs}/>`;
+};
+
+/** SVG markup (defs + elements) for a list of shapes. `id` keeps gradient ids unique per picture. */
+export function shapesToSvg(shapes: Shape[], id: string): string {
+  return shapeEls(shapes, id).map(markup).join("");
+}
+
+/** Elements in document order (each gradient followed by its stops), as querySelectorAll lists them. */
+const flat = (els: El[]): El[] => els.flatMap((e) => [e, ...(e.kids ? flat(e.kids) : [])]);
+
+const drawn = new WeakMap<Element, { els: El[]; nodes: Element[] }>();
+
+/**
+ * Draws shapes into a group that may already hold the previous frame's picture. When the scene
+ * has the same elements as before (the usual case while it moves), only the attributes that
+ * changed are updated — far less work for the browser than rebuilding the markup every frame,
+ * which keeps the animation smooth on phones. Otherwise the group is redrawn from scratch.
+ */
+export function patchSvg(group: Element, shapes: Shape[], id: string): void {
+  const els = flat(shapeEls(shapes, id));
+  const prev = drawn.get(group);
+  if (!prev || prev.els.length !== els.length || prev.els.some((e, i) => e.tag !== els[i].tag)) {
+    group.innerHTML = shapesToSvg(shapes, id);
+    drawn.set(group, { els, nodes: Array.from(group.querySelectorAll("*")) });
+    return;
+  }
+  els.forEach((e, i) => {
+    const before = prev.els[i];
+    const node = prev.nodes[i];
+    for (const [k, v] of e.at) if (before.at.find((x) => x[0] === k)?.[1] !== v) node.setAttribute(k, v);
+    for (const [k] of before.at) if (!e.at.some((x) => x[0] === k)) node.removeAttribute(k);
+    if (e.text !== before.text) node.textContent = e.text ?? "";
+  });
+  drawn.set(group, { els, nodes: prev.nodes });
 }

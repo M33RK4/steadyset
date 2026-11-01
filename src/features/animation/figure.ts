@@ -76,6 +76,8 @@ export type Shape =
 
 export const L = { torso1: 22, torso2: 22, neck: 5, head: 8, upper: 24, fore: 22, thigh: 30, shin: 30, foot: 9 };
 export const FLOOR = 135;
+/** Lowest a toe sits: a foot flat on the floor (the sole's thickness below it). */
+const TOE_FLOOR = 133.6;
 
 /**
  * Which body the figure is drawn with (the "Exercise body" setting). The female figure has a
@@ -108,6 +110,22 @@ export interface Pose {
   wrist?: [number, number];
   /** "flat" for hands pressed on the floor or a bench; default a closed grip */
   handKind?: [HandKind, HandKind];
+  /**
+   * Limbs whose hands / feet travel in a straight line between poses, e.g. feet on a sled that
+   * runs on rails. Otherwise moving limbs swing naturally around the shoulder and elbow (hip and
+   * knee), and hands or feet that stay put between two poses stay planted.
+   */
+  straight?: ("hands" | "feet")[];
+  /** On the way from this pose to the next, how high each foot lifts mid-move (a step). */
+  lift?: [number, number];
+  /**
+   * For legs turning out of the side-on view (knees dropping toward or away from the camera):
+   * where the knees appear. The legs are drawn through them, the bones looking shorter as they
+   * point toward or away from the viewer, and `feet` are then the ankles exactly.
+   */
+  knees?: [Pt, Pt];
+  /** With `knees`: where the toes appear (a foot pivoting on its heel looks shorter mid-turn). */
+  toes?: [Pt, Pt];
 }
 
 export const rad = (d: number) => (d * Math.PI) / 180;
@@ -166,6 +184,37 @@ function anatomical(root: Pt, target: Pt, a: number, b: number, flex: 1 | -1): P
   return turn(j1) >= turn(j2) ? j1 : j2;
 }
 
+/** How far before full reach a limb starts easing into straight (soft IK). */
+const SOFT = 1.6;
+/**
+ * Poses often put a hand or foot well beyond reach just to say "this limb is straight". Past
+ * this much overshoot the limb looks the same, so targets are held to it; that keeps in-between
+ * positions on the limb's natural path instead of being dragged toward a far-off point.
+ */
+const OVER = 3;
+
+/**
+ * Soft IK: as a target nears the limb's full length, the limb straightens gradually instead of
+ * snapping straight. Plain two-bone IK swings the elbow or knee very fast just before lockout and
+ * then stops dead; easing the reach off removes that whip. A target far beyond reach still gives
+ * a straight limb; one right at full reach leaves a slight, natural bend.
+ */
+function softTarget(root: Pt, target: Pt, full: number): Pt {
+  const d = sub(target, root);
+  const l = len(d);
+  const s0 = full - SOFT;
+  if (l <= s0) return target;
+  const x = Math.min(l, full + OVER) - s0;
+  return add(root, mul(d, (s0 + SOFT * (1 - Math.exp(-x / SOFT))) / l));
+}
+
+/** The target distance that `softTarget` turns into reach `e` (its inverse). */
+function unsoft(e: number, full: number): number {
+  const s0 = full - SOFT;
+  if (e <= s0) return e;
+  return s0 + Math.min(-SOFT * Math.log(Math.max(1e-9, 1 - (e - s0) / SOFT)), SOFT + OVER);
+}
+
 export interface Joints {
   hip: Pt;
   mid: Pt;
@@ -186,6 +235,19 @@ export interface Joints {
   headAngle: number;
 }
 
+/**
+ * The foot's angle at the ankle, relative to the shin: between fully pointed (−8°, e.g. kneeling
+ * with the top of the foot on the floor) and fully flexed (−118°).
+ */
+const ankleAngle = (foot: number, shin: number) => clamp(wrap(foot - shin), -118, -8);
+
+/** Direction of the shin for a hip and foot target (the same leg `joints` builds). */
+function shinAngle(hip: Pt, foot: Pt): number {
+  const ft = softTarget(hip, foot, L.thigh + L.shin);
+  const knee = anatomical(hip, ft, L.thigh, L.shin, 1);
+  return angleOf(knee, reach(knee, ft, L.shin));
+}
+
 export function joints(p: Pose): Joints {
   const mid = dir(p.torso[0], L.torso1, p.hip);
   const neck = dir(p.torso[1], L.torso2, mid);
@@ -193,19 +255,85 @@ export function joints(p: Pose): Joints {
   const shoulder = add(neck, mul(unit(sub(mid, neck)), 3));
   const fa = p.footAngle ?? [0, 0];
   const wr = p.wrist ?? [0, 0];
-  const elbow = [0, 1].map((i) => anatomical(neck, p.hands[i], L.upper, L.fore, -1)) as [Pt, Pt];
-  const hand = [0, 1].map((i) => reach(elbow[i], p.hands[i], L.fore)) as [Pt, Pt];
+  const handT = [0, 1].map((i) => softTarget(neck, p.hands[i], L.upper + L.fore));
+  const elbow = [0, 1].map((i) => anatomical(neck, handT[i], L.upper, L.fore, -1)) as [Pt, Pt];
+  const hand = [0, 1].map((i) => reach(elbow[i], handT[i], L.fore)) as [Pt, Pt];
   const handAngle = [0, 1].map((i) => angleOf(elbow[i], hand[i]) + clamp(wr[i], -75, 75)) as [number, number];
   const grip = [0, 1].map((i) => dir(handAngle[i], 2.8, hand[i])) as [Pt, Pt];
-  const knee = [0, 1].map((i) => anatomical(p.hip, p.feet[i], L.thigh, L.shin, 1)) as [Pt, Pt];
-  const ankle = [0, 1].map((i) => reach(knee[i], p.feet[i], L.shin)) as [Pt, Pt];
+  const footT = [0, 1].map((i) => softTarget(p.hip, p.feet[i], L.thigh + L.shin));
+  // legs drawn through given knees (turned out of the side-on view) or solved as usual
+  const knee = [0, 1].map((i) => p.knees?.[i] ?? anatomical(p.hip, footT[i], L.thigh, L.shin, 1)) as [Pt, Pt];
+  const ankle = [0, 1].map((i) => (p.knees ? p.feet[i] : reach(knee[i], footT[i], L.shin))) as [Pt, Pt];
   // the foot sits between fully pointed (−8°, e.g. kneeling with the top of the foot on the floor)
   // and fully flexed (−118°) relative to the shin
   const toe = [0, 1].map((i) => {
+    if (p.knees && p.toes) return p.toes[i];
     const shinA = angleOf(knee[i], ankle[i]);
-    return dir(shinA + clamp(wrap(fa[i] - shinA), -118, -8), L.foot, ankle[i]);
+    const tp = dir(shinA + ankleAngle(fa[i], shinA), L.foot, ankle[i]);
+    // toes never push down through the floor: the foot rolls up onto it instead (soft limit)
+    const over = tp[1] - TOE_FLOOR;
+    if (over <= 0 || ankle[i][1] >= TOE_FLOOR) return tp;
+    const y = TOE_FLOOR + 0.6 * (1 - Math.exp(-over / 0.6));
+    const dy = y - ankle[i][1];
+    const dx = Math.sqrt(Math.max(0, L.foot * L.foot - dy * dy)) * Math.sign(tp[0] - ankle[i][0] || 1);
+    const rolled: Pt = [ankle[i][0] + dx, y];
+    // only as far as the ankle can bend
+    const rel = wrap(angleOf(ankle[i], rolled) - shinA);
+    return rel >= -118 && rel <= -8 ? rolled : tp;
   }) as [Pt, Pt];
   return { hip: p.hip, mid, neck, head, shoulder, elbow, hand, grip, handAngle, handKind: p.handKind ?? ["fist", "fist"], knee, ankle, toe, headAngle: p.head };
+}
+
+const neckOf = (p: Pose) => dir(p.torso[1], L.torso2, dir(p.torso[0], L.torso1, p.hip));
+
+/**
+ * A limb's joint angles in the body's own terms: how far the upper bone is raised forward from
+ * hanging along the torso (−90…270, so an arm going overhead never takes the short way round
+ * behind the back), and the bend of the middle joint.
+ */
+function limbAngles(root: Pt, target: Pt, down: number, a: number, b: number, flex: 1 | -1) {
+  // the limb as it is actually drawn (soft IK), so its joints are exactly where they appear
+  const reachable = softTarget(root, target, a + b);
+  const m = anatomical(root, reachable, a, b, flex);
+  const upper = angleOf(root, m);
+  let raise = wrap(down - upper);
+  if (raise < -90) raise += 360;
+  return { raise, bend: wrap(angleOf(m, reachable) - upper) };
+}
+
+/**
+ * Where a hand or foot is part-way between two poses. A planted one stays put; one moving freely
+ * swings on its joints (a curl's hand travels round the elbow, not in a straight line through the
+ * forearm); `straight` limbs move in a line. Exact at both ends, whatever the limb's reach.
+ */
+function limbTarget(ta: Pt, tb: Pt, t: number, ra: Pt, rb: Pt, r: Pt, da: number, db: number, d: number, a: number, b: number, flex: 1 | -1, straight: boolean): Pt {
+  if (planted(ta, tb, ra, rb, straight)) return lerpPt(ta, tb, t);
+  const A = limbAngles(ra, ta, da, a, b, flex);
+  const B = limbAngles(rb, tb, db, a, b, flex);
+  // When both joints work together (a press, a pull, a row, a step) the hand or foot travels in
+  // a straight line, as people's reaching movements do. When one joint does the work (a curl, a
+  // leg extension, a raise) it swings in an arc around that joint.
+  const dRaise = Math.abs(B.raise - A.raise);
+  const dBend = Math.abs(B.bend - A.bend);
+  const straightLine = Math.max(dRaise, dBend) > 15 && Math.min(dRaise, dBend) > 0.35 * Math.max(dRaise, dBend);
+  const upper = d - lerp(A.raise, B.raise, t);
+  // the line runs between where the hand or foot is actually drawn at each end
+  const end = straightLine ? lerpPt(softTarget(ra, ta, a + b), softTarget(rb, tb, a + b), t) : dir(upper + lerp(A.bend, B.bend, t), b, dir(upper, a, r));
+  // aim where soft IK will bring the hand or foot exactly to `end`, joints just as swung
+  const p = add(r, mul(unit(sub(end, r)), unsoft(len(sub(end, r)), a + b)));
+  // a swing near the floor never dips through it (soft limit, exact at both ends)
+  const low = Math.max(ta[1], tb[1]);
+  if (low < FLOOR - 8 || p[1] <= low) return p;
+  return [p[0], low + 0.6 * (1 - Math.exp(-(p[1] - low) / 0.6))];
+}
+
+/**
+ * Hands and feet that stay put, or barely move while the body moves a lot (a foot on a step as
+ * the body rises over it), move in a straight line: they're resting on something.
+ */
+function planted(ta: Pt, tb: Pt, ra: Pt, rb: Pt, straight: boolean) {
+  const moved = len(sub(tb, ta));
+  return straight || moved < 1e-9 || moved < 0.25 * len(sub(sub(tb, rb), sub(ta, ra)));
 }
 
 export function lerpPose(a: Pose, b: Pose, t: number): Pose {
@@ -214,20 +342,84 @@ export function lerpPose(a: Pose, b: Pose, t: number): Pose {
     const ya = y ?? [0, 0];
     return [lerp(xa[0], ya[0], t), lerp(xa[1], ya[1], t)];
   };
-  return {
-    hip: lerpPt(a.hip, b.hip, t),
-    torso: [lerp(a.torso[0], b.torso[0], t), lerp(a.torso[1], b.torso[1], t)],
+  const hip = lerpPt(a.hip, b.hip, t);
+  const torso: [number, number] = [lerp(a.torso[0], b.torso[0], t), lerp(a.torso[1], b.torso[1], t)];
+  const straight = a.straight ?? b.straight ?? [];
+  const neck = [neckOf(a), neckOf(b), neckOf({ ...a, hip, torso })] as const;
+  // "down along the body" for each limb: from the shoulders along the chest, from the hips along the belly
+  const armDown = [a.torso[1] + 180, b.torso[1] + 180, torso[1] + 180] as const;
+  const legDown = [a.torso[0] + 180, b.torso[0] + 180, torso[0] + 180] as const;
+  const hand = (i: 0 | 1) => limbTarget(a.hands[i], b.hands[i], t, neck[0], neck[1], neck[2], ...armDown, L.upper, L.fore, -1, straight.includes("hands"));
+  const foot = (i: 0 | 1) => limbTarget(a.feet[i], b.feet[i], t, a.hip, b.hip, hip, ...legDown, L.thigh, L.shin, 1, straight.includes("feet"));
+  const lift = (i: 0 | 1): Pt => {
+    const f = foot(i);
+    return [f[0], f[1] - Math.sin(Math.PI * t) * (a.lift?.[i] ?? 0)];
+  };
+  const pose: Pose = {
+    hip,
+    torso,
     head: lerp(a.head, b.head, t),
-    hands: [lerpPt(a.hands[0], b.hands[0], t), lerpPt(a.hands[1], b.hands[1], t)],
-    feet: [lerpPt(a.feet[0], b.feet[0], t), lerpPt(a.feet[1], b.feet[1], t)],
-    footAngle: pair(a.footAngle, b.footAngle),
+    hands: [hand(0), hand(1)],
+    feet: [a.feet[0], a.feet[1]],
     wrist: pair(a.wrist, b.wrist),
     handKind: t < 0.5 ? a.handKind : b.handKind,
+    straight: a.straight,
+  };
+  if (a.knees || b.knees) {
+    // legs turning out of the side-on view: knees, ankles and toes glide between where they appear
+    const ja = joints(a);
+    const jb = joints(b);
+    const at = (pa: [Pt, Pt], pb: [Pt, Pt]) => [lerpPt(pa[0], pb[0], t), lerpPt(pa[1], pb[1], t)] as [Pt, Pt];
+    const feet = at(ja.ankle, jb.ankle);
+    // a foot turning round pivots on its heel: it swings through toes-up and looks shortest
+    // (pointing at the viewer) halfway, instead of flipping over in one frame
+    const toe = (i: 0 | 1): Pt => {
+      const oa = sub(ja.toe[i], ja.ankle[i]);
+      const ob = sub(jb.toe[i], jb.ankle[i]);
+      const aa = angleOf([0, 0], oa);
+      let turn = wrap(angleOf([0, 0], ob) - aa);
+      if (Math.abs(turn) > 90 && Math.sin(rad(aa + turn / 2)) > 0) turn -= 360 * Math.sign(turn);
+      const shrink = 1 - Math.sin(Math.PI * t) * clamp((Math.abs(turn) - 60) / 120, 0, 1) * 0.85;
+      return dir(aa + turn * t, lerp(len(oa), len(ob), t) * shrink, feet[i]);
+    };
+    return { ...pose, knees: at(ja.knee, jb.knee), feet, toes: [toe(0), toe(1)] };
+  }
+  const feet: [Pt, Pt] = [lift(0), lift(1)];
+  return {
+    ...pose,
+    feet,
+    // a foot resting on something keeps its angle to it (the short way round); a moving foot
+    // turns at the ankle, following the shin
+    footAngle: [0, 1].map((i) => {
+      const fa = a.footAngle?.[i] ?? 0;
+      const fb = b.footAngle?.[i] ?? 0;
+      if (planted(a.feet[i], b.feet[i], a.hip, b.hip, straight.includes("feet"))) return fa + wrap(fb - fa) * t;
+      const sa = shinAngle(a.hip, a.feet[i]);
+      const sb = shinAngle(b.hip, b.feet[i]);
+      return shinAngle(hip, feet[i]) + lerp(ankleAngle(fa, sa), ankleAngle(fb, sb), t);
+    }) as [number, number],
   };
 }
 
-/** Smooth start and stop (no sudden changes in speed). */
-export const ease = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+/**
+ * Speed curve of a movement between two positions: a gentle build-up, a steady controlled middle
+ * and a gentle settle, like a lift done with good tempo. Speed and acceleration are both zero at
+ * the ends, so moves blend into holds without a jolt; the top speed is only 1.4× the average
+ * (a plain S-curve peaks at almost twice it, which reads as a lurch through the middle).
+ */
+const RAMP = 0.3;
+export const ease = (t: number) => {
+  const v = 1 / (1 - RAMP);
+  const up = (x: number) => {
+    const u = x / RAMP;
+    return v * RAMP * (u * u * u - (u * u * u * u) / 2);
+  };
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  if (t < RAMP) return up(t);
+  if (t > 1 - RAMP) return 1 - up(1 - t);
+  return v * (RAMP / 2 + t - RAMP);
+};
 
 /**
  * Keyframes with holds. Each step: move to pose over `move` (fraction of the cycle), then hold
@@ -363,7 +555,9 @@ function hand(wrist: Pt, angle: number, tone: Tone, kind: HandKind): Shape[] {
 function shoe(ankle: Pt, toe: Pt, near: boolean): Shape[] {
   const u = unit(sub(toe, ankle));
   const w: Pt = [u[1], -u[0]]; // "up" from the sole
-  const P = (x: number, y: number) => local(ankle, u, w, x, y);
+  // a foot turned toward or away from the viewer looks shorter (only legs drawn through set knees)
+  const s = clamp(len(sub(toe, ankle)) / L.foot, 0.15, 1);
+  const P = (x: number, y: number) => local(ankle, u, w, x * s, y);
   const tone: Tone = near ? "shoe" : "shoeFar";
   const upper = smooth([P(-3.4, 2.6), P(-3.8, -0.6), P(-3, -2), P(6, -2.2), P(11.4, -2), P(12.6, -0.8), P(11.8, 0.8), P(8.4, 1.8), P(4.2, 2.6), P(1.4, 3.9), P(-1.4, 4.1)]);
   return [
@@ -402,7 +596,8 @@ function head(j: Joints): Shape[] {
     const p1 = add(add(base, mul(back, 2.6)), mul(hang, 1.6));
     const p2 = add(p1, mul(hang, 5));
     const p3 = add(p2, mul(hang, 5.4));
-    const away = Math.sign(back[0]) || -1;
+    // on the floor it spreads out beyond the top of the head (smoothly, whichever way that is)
+    const away = clamp(up[0] * 2, -1, 1);
     const spine = [base, p1, p2, p3].map((p): Pt => (p[1] > FLOOR - 1.6 ? [p[0] + away * (p[1] - FLOOR + 1.6) * 0.9, FLOOR - 1.6] : p));
     const widths = [2, 2.5, 1.9, 0.5];
     const side = (s: number) =>
@@ -670,17 +865,26 @@ export interface BodyLayers {
   glow: Shape[];
 }
 
+/** Test hook: sees the joints of every side-view figure drawn (smoothness checks). */
+export const jointProbe: { side: ((j: Joints) => void) | null } = { side: null };
+
 export function bodyLayers(j: Joints, muscles: MuscleId[] = [], k = 0, legSide: 0 | 1 = 1): BodyLayers {
+  jointProbe.side?.(j);
   // With the arm raised above the shoulder, a flat drawing would put the arm across the face.
-  // In reality it passes beside the ear, so draw the head in front and keep the face visible.
-  const armRaised = j.elbow[1][1] < j.shoulder[1] - 3 && j.hand[1][1] < j.neck[1];
+  // In reality it passes beside the ear, so the head is drawn again in front of the arm. That
+  // copy fades in as the arm rises (rather than the head jumping in front in a single frame).
+  const above = (lo: number, hi: number, x: number) => {
+    const u = clamp((x - lo) / (hi - lo), 0, 1);
+    return u * u * (3 - 2 * u);
+  };
+  const raised = above(1, 7, j.shoulder[1] - j.elbow[1][1]) * above(-2, 4, j.neck[1] - j.hand[1][1]);
   const h = head(j);
   return {
     farArm: armShapes(j, 0),
     farLeg: legShapes(j, 0),
-    trunk: armRaised ? trunkShapes(j) : [...trunkShapes(j), ...h],
+    trunk: [...trunkShapes(j), ...h],
     nearLeg: legShapes(j, 1),
-    nearArm: armRaised ? [...armShapes(j, 1), ...h] : armShapes(j, 1),
+    nearArm: [...armShapes(j, 1), ...h.map((s): Shape => ({ ...s, op: (s.op ?? 1) * raised }))],
     glow: muscleGlow(j, muscles, k, legSide),
   };
 }

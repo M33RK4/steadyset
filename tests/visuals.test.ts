@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BUILT_IN_EXERCISES } from "../src/lib/data/exercises";
 import { muscleTargets, musclesFor } from "../src/lib/data/muscles";
 import { ANIMATIONS, animationFor } from "../src/features/animation/library";
-import { angleOf, joints, withBody, wrap, type Pose, type Pt } from "../src/features/animation/figure";
+import { angleOf, jointProbe, joints, withBody, wrap, type Joints, type Pose, type Pt } from "../src/features/animation/figure";
 
 test("muscle names map onto the right areas of the muscle map", () => {
   assert.deepEqual(musclesFor(["Glutes (side)"]), ["abductors"]);
@@ -96,6 +96,35 @@ test("elbows, knees, ankles and wrists only bend the way real joints can", () =>
       assert.ok(ankle >= -118.5 && ankle <= -7.5, `ankle out of range: ${ankle}`);
       // wrists within ±75°
       assert.ok(Math.abs(wrap(j.handAngle[i] - angleOf(j.elbow[i], j.hand[i]))) <= 75.5, "wrist out of range");
+    }
+  }
+});
+
+test("every animation moves smoothly: no joint jolts, snaps or parts popping in and out", () => {
+  // joints are the same for both bodies; the default (female) one is checked
+  for (const [key, anim] of Object.entries(ANIMATIONS)) {
+    // one sample per frame at 60 fps, all the way round the loop (including back to the start)
+    const n = Math.round(anim.cycle * 60);
+    const frames: { j: Joints | null; count: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      let j: Joints | null = null;
+      jointProbe.side = (x) => {
+        j ??= x;
+      };
+      const count = withBody("female", () => anim.at(i / n, [])).length;
+      jointProbe.side = null;
+      frames.push({ j, count });
+    }
+    assert.ok(frames.every((f) => f.count === frames[0].count), `${key}: shapes appear or disappear mid-loop`);
+    if (!frames[0].j) continue;
+    const pts = (j: Joints): Pt[] => [j.hip, j.neck, j.head, ...j.elbow, ...j.hand, ...j.knee, ...j.ankle, ...j.toe];
+    for (let i = 0; i < n; i++) {
+      const [p, q, r] = [frames[(i - 1 + n) % n], frames[i], frames[(i + 1) % n]].map((f) => pts(f.j as Joints));
+      q.forEach((qq, c) => {
+        // change of speed between frames: tiny for eased motion, large for a snap or a whip
+        const jolt = Math.hypot(r[c][0] - 2 * qq[0] + p[c][0], r[c][1] - 2 * qq[1] + p[c][1]);
+        assert.ok(jolt < 0.8, `${key}: joint ${c} jolts by ${jolt.toFixed(2)} at t=${(i / n).toFixed(3)}`);
+      });
     }
   }
 });

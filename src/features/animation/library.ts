@@ -16,6 +16,7 @@ import {
   lerpPt,
   mul,
   perp,
+  rad,
   sub,
   unit,
   type FrontJoints,
@@ -626,7 +627,12 @@ const treadmill: ExerciseAnimation = {
       { k: "circle", c: [134, 72], r: 2.6, fill: true, tone: "rubber", stroke: "line", sw: 0.6 },
       ...screen([182, 52], 20, 9, -18),
       { k: "rect", x: 36, y: 132, w: 140, h: 6, rx: 3, fill: true, tone: "rubber", stroke: "line", sw: 0.65 },
-      ...Array.from({ length: 14 }, (_, i): Shape => ({ k: "line", a: [40 + i * 10 - off, 133.2], b: [44 + i * 10 - off, 133.2], w: 0.8, tone: "metalLight", op: 0.7 })),
+      // belt stripes scroll and shorten as they reach the rollers at each end (never past them)
+      ...Array.from({ length: 16 }, (_, i): Shape => {
+        const x0 = Math.max(39, 30 + i * 10 - off);
+        const x1 = Math.min(173, 34 + i * 10 - off);
+        return { k: "line", a: [x0, 133.2], b: [Math.max(x0, x1), 133.2], w: 0.8, tone: "metalLight", op: x1 > x0 ? 0.7 : 0 };
+      }),
       { k: "path", d: "M150,132 L150,124 Q150,118 158,118 L178,118 Q186,118 186,126 L186,138 L150,138 Z", w: 0, fill: true, tone: "metal", stroke: "line", sw: 0.65 },
       { k: "line", a: [154, 122], b: [182, 122], w: 0.7, tone: "metalLight" },
       foot(42, 10),
@@ -1010,12 +1016,23 @@ const kneeDrop = floorMove(
   4,
   "Lying on the back with knees bent: one knee falls in toward the floor and comes back, then the other.",
   [{ t: 0, label: "Knees up" }, { t: 0.25, label: "One knee dropped" }, { t: 0.75, label: "Other knee dropped" }],
-  [
-    { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 130], [106, 130]], feet: [[130, 131], [134, 131]], handKind: FLAT },
-    { hip: [104, 125], torso: [180, 180], head: 178, hands: [[104, 130], [106, 130]], feet: [[130, 131], [140, 129]], handKind: FLAT },
-    { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 130], [106, 130]], feet: [[130, 131], [134, 131]], handKind: FLAT },
-    { hip: [104, 125], torso: [180, 180], head: 182, hands: [[104, 130], [106, 130]], feet: [[138, 129], [134, 131]], handKind: FLAT },
-  ],
+  (() => {
+    const up: Pose = { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 130], [106, 130]], feet: [[130, 131], [134, 131]], handKind: FLAT };
+    // A knee falling in rolls the leg about the line from hip to foot, out of the side-on view:
+    // seen from the side the knee sinks toward that line and the thigh and shin look shorter.
+    const [farUp, nearUp] = joints(up).knee;
+    const fallen = (knee: Pt, ankle: Pt): Pt => {
+      const axis = unit(sub(ankle, up.hip));
+      const along = add(up.hip, mul(axis, (knee[0] - up.hip[0]) * axis[0] + (knee[1] - up.hip[1]) * axis[1]));
+      return add(along, mul(sub(knee, along), Math.cos(rad(72))));
+    };
+    return [
+      up,
+      { ...up, head: 178, knees: [farUp, fallen(nearUp, up.feet[1])] },
+      up,
+      { ...up, head: 182, knees: [fallen(farUp, up.feet[0]), nearUp] },
+    ];
+  })(),
 );
 
 const sideSitLegLift = floorMove(
@@ -1040,17 +1057,31 @@ const lowLungeQuad = floorMove(
   ],
 );
 
-const kneelToSquat = floorMove(
-  3.8,
-  "From kneeling on one knee, hands behind the head: rise into a wide deep squat, then lower to the other knee.",
-  [{ t: 0, label: "Kneeling" }, { t: 0.5, label: "Deep squat" }],
-  [
-    { hip: [96, 103], torso: [-90, -90], head: -88, hands: [[88, 44], [90, 44]], feet: [[128, 131], [66, 130]], footAngle: [0, 180] },
-    { hip: [92, 112], torso: [-76, -82], head: -86, hands: [[92, 52], [94, 52]], feet: [[114, 133], [106, 133]], footAngle: [0, 0] },
-  ],
-  undefined,
-  (j) => j.hip,
-);
+const kneelToSquat: ExerciseAnimation = (() => {
+  const kneel: Pose = { hip: [96, 103], torso: [-90, -90], head: -88, hands: [[88, 44], [90, 44]], feet: [[128, 131], [66, 130]], footAngle: [0, 180] };
+  // the back toes tuck under first (heel up, toes on the floor), so the foot can pivot over them
+  const tuck: Pose = { ...kneel, hip: [96, 102], feet: [[128, 131], [67, 125]], footAngle: [0, 118] };
+  // the back foot lifts as it steps through to the squat and back
+  const squat: Pose = { hip: [92, 112], torso: [-76, -82], head: -86, hands: [[92, 52], [94, 52]], feet: [[114, 133], [106, 133]], footAngle: [0, 0], lift: [0, 12] };
+  return {
+    cycle: 3.8,
+    cue: "From kneeling on one knee, hands behind the head: tuck the back toes, rise into a wide deep squat, then lower back to the knee.",
+    frames: [
+      { t: 0, label: "Kneeling" },
+      { t: 0.5, label: "Deep squat" },
+    ],
+    at: side(
+      [
+        { pose: kneel, hold: 0.1, move: 0.12 },
+        { pose: { ...tuck, lift: [0, 12] }, hold: 0.02, move: 0.2 },
+        { pose: squat, hold: 0.12, move: 0.2 },
+        { pose: tuck, hold: 0.02, move: 0.12 },
+      ],
+      (j) => ({ back: [shadow(100, 130), ...mat(14, 186)] }),
+      (j) => j.hip,
+    ),
+  };
+})();
 
 const couchStretch = floorMove(
   5,
@@ -1067,12 +1098,22 @@ const ninetySwitch = floorMove(
   4.4,
   "Seated, knees bent: both legs rotate down to one side into 90/90, back through the middle, and over to the other side.",
   [{ t: 0, label: "Knees up" }, { t: 0.25, label: "90/90 one way" }, { t: 0.75, label: "90/90 the other way" }],
-  [
-    { hip: [92, 126], torso: [-100, -96], head: -88, hands: [[74, 131], [76, 131]], feet: [[120, 131], [124, 131]], handKind: FLAT },
-    { hip: [92, 126], torso: [-96, -92], head: -88, hands: [[74, 131], [76, 131]], feet: [[32, 130], [120, 130]], footAngle: [180, 0], handKind: FLAT },
-    { hip: [92, 126], torso: [-100, -96], head: -88, hands: [[74, 131], [76, 131]], feet: [[120, 131], [124, 131]], handKind: FLAT },
-    { hip: [92, 126], torso: [-96, -92], head: -88, hands: [[74, 131], [76, 131]], feet: [[122, 130], [32, 130]], footAngle: [0, 180], handKind: FLAT },
-  ],
+  (() => {
+    const up: Pose = { hip: [92, 126], torso: [-100, -96], head: -88, hands: [[74, 131], [76, 131]], feet: [[120, 131], [124, 131]], handKind: FLAT };
+    // In 90/90 the legs have turned out of the side-on view: the front leg's thigh lies forward
+    // with its shin across the body (seen end-on, short), the back leg's thigh points sideways
+    // (short) with its shin behind. Feet pivot on their heels on the way.
+    const front = { knee: [120, 129] as Pt, ankle: [111, 131.5] as Pt, toe: [114.5, 131.5] as Pt };
+    const back = { knee: [97, 130] as Pt, ankle: [70, 130] as Pt, toe: [61.2, 131] as Pt };
+    const side = (near: typeof front, far: typeof front): Pose => ({
+      ...up,
+      torso: [-96, -92],
+      knees: [far.knee, near.knee],
+      feet: [far.ankle, near.ankle],
+      toes: [far.toe, near.toe],
+    });
+    return [up, side(front, back), up, side(back, front)];
+  })(),
 );
 
 const deadBug: ExerciseAnimation = {
@@ -1396,9 +1437,10 @@ const walkingLunge: ExerciseAnimation = (() => {
     [99, 140],
     [101, 140],
   ];
-  const stand: Pose = { hip: [100, 74], torso: [-89, -90], head: -88, hands, feet: [[97, 133], [103, 133]] };
+  // the feet move in straight lines: the one on the floor travels with the scrolling floor
+  const stand: Pose = { hip: [100, 74], torso: [-89, -90], head: -88, hands, feet: [[97, 133], [103, 133]], straight: ["feet"] };
   // [far, near] feet: front foot flat, back foot up on the toes, back knee just above the floor
-  const nearForward: Pose = { hip: [100, 101], torso: [-87, -89], head: -86, hands, feet: [[66, 125], [127, 133]], footAngle: [62, 0] };
+  const nearForward: Pose = { hip: [100, 101], torso: [-87, -89], head: -86, hands, feet: [[66, 125], [127, 133]], footAngle: [62, 0], straight: ["feet"] };
   const farForward: Pose = { ...nearForward, feet: [[127, 133], [66, 125]], footAngle: [0, 62] };
   // each move: from → to, which foot stays on the floor (0 far, 1 near) and which one swings
   const segs: { from: Pose; to: Pose; planted: 0 | 1; k: [number, number] }[] = [
@@ -1416,7 +1458,10 @@ const walkingLunge: ExerciseAnimation = (() => {
     starts.push(acc);
     acc += s.from.feet[s.planted][0] - s.to.feet[s.planted][0];
   }
-  const loop = acc; // distance travelled per full cycle (the floor pattern repeats every 32)
+  const loop = acc; // distance travelled per full cycle
+  // floor tiles about 32 apart, spaced so a whole number of them pass per cycle: the floor
+  // carries on seamlessly when the loop starts again
+  const tile = loop / Math.max(1, Math.round(loop / 32));
   const at = (t: number, muscles: MuscleId[] = []): Shape[] => {
     const x = (((t % 1) + 1) % 1) * segs.length * (HOLD + MOVE);
     const i = Math.min(segs.length - 1, Math.floor(x / (HOLD + MOVE)));
@@ -1433,9 +1478,9 @@ const walkingLunge: ExerciseAnimation = (() => {
     const j = joints(pose);
     // the glow follows the front (working) leg
     const b = bodyLayers(j, muscles, k, i < 2 ? 1 : 0);
-    const off = ((scroll % loop) + loop) % 32;
+    const off = ((scroll % tile) + tile) % tile;
     const tiles: Shape[] = Array.from({ length: 10 }, (_, n): Shape => {
-      const xx = -24 + n * 32 - off;
+      const xx = -24 + n * tile - off;
       return { k: "line", a: [xx, FLOOR + 0.6], b: [100 + (xx - 100) * 1.7, FLOOR + 30], w: 0.7, tone: "floorLine", shade: -14 };
     });
     return [
