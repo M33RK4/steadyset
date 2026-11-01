@@ -141,3 +141,42 @@ export function consistency(requiredDays: number, doneDays: number): number | nu
   if (requiredDays === 0) return null;
   return Math.round((Math.min(doneDays, requiredDays) / requiredDays) * 100);
 }
+
+export interface LastTime {
+  entry: ExerciseHistoryEntry;
+  /** "3 × 10 at 12 kg", or "10, 10, 8 at 12 kg" when the sets differed. */
+  summary: string;
+  /** Set to add weight or reps: the top of the rep range was hit on every set two sessions in a row. */
+  progress: { kind: "weight"; weight: number; step: number } | { kind: "reps" } | null;
+}
+
+const amountOf = (s: ExerciseHistoryEntry["sets"][number]) => s.durationSeconds ?? s.reps ?? 0;
+
+export function formatSets(entry: ExerciseHistoryEntry, units: Units): string {
+  const seconds = entry.sets.some((s) => s.durationSeconds !== null);
+  const amounts = entry.sets.map((s) => `${amountOf(s)}${seconds ? "s" : ""}`);
+  const reps = amounts.every((a) => a === amounts[0]) ? `${amounts.length} × ${amounts[0]}` : amounts.join(", ");
+  const weights = [...new Set(entry.sets.map((s) => s.weight).filter((w): w is number => w !== null))];
+  if (!weights.length) return reps;
+  const weight = weights.length === 1 ? `${weights[0]}` : `${Math.min(...weights)}–${Math.max(...weights)}`;
+  return `${reps} at ${weight} ${units}`;
+}
+
+/** What was done for this exercise in the most recent finished session, plus a progression nudge. */
+export function lastTimeFor(
+  data: AppData,
+  key: { exerciseId: string | null; name: string; repsMax: number; targetSets: number; usesWeight: boolean },
+  units: Units,
+): LastTime | null {
+  const history = exerciseHistory(data, key, units);
+  const entry = history[history.length - 1];
+  if (!entry) return null;
+  const topped = (e: ExerciseHistoryEntry) => e.sets.length >= Math.max(1, key.targetSets) && e.sets.every((s) => amountOf(s) >= key.repsMax);
+  const before = history[history.length - 2];
+  let progress: LastTime["progress"] = null;
+  if (before && topped(entry) && topped(before) && entry.topWeight === before.topWeight) {
+    const step = units === "kg" ? 2.5 : 5;
+    progress = key.usesWeight && entry.topWeight !== null ? { kind: "weight", weight: roundWeight(entry.topWeight + step), step } : { kind: "reps" };
+  }
+  return { entry, summary: formatSets(entry, units), progress };
+}

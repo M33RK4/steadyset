@@ -25,8 +25,8 @@ import {
 import { adjustTimer, clearTimer, pauseTimer, progress, remainingMs, resumeTimer, startTimer, REST_PRESETS } from "@/lib/timer/restTimer";
 import { useNow } from "@/lib/timer/TimerWatcher";
 import { unlockAudio } from "@/lib/audio/alerts";
-import { convertWeight, roundWeight } from "@/lib/stats/stats";
-import { formatClock } from "@/lib/util/dates";
+import { convertWeight, lastTimeFor, roundWeight } from "@/lib/stats/stats";
+import { diffDays, formatClock, formatShortDate } from "@/lib/util/dates";
 import { activePlan, daysOfPlan, estimateMinutes, formatTarget } from "@/lib/plans/planOps";
 import type { AppData, SessionExercise, Units } from "@/lib/domain/types";
 import { Badge, Button, EmptyState, IconButton, NumberStepper, ProgressBar, ProgressRing, cx } from "@/components/ui/primitives";
@@ -387,6 +387,7 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
         />
       ) : (
         <>
+          <LastTimeNote se={se} setNumber={setNumber} />
           <div className={cx("grid gap-3", se.usesWeight ? "grid-cols-2" : "grid-cols-1 max-w-xs")}>
             <NumberStepper label={isSeconds ? "Seconds held" : se.perSide ? "Reps (per side)" : "Reps"} value={reps} onChange={setReps} min={0} max={isSeconds ? 600 : 100} />
             {se.usesWeight && (
@@ -419,6 +420,47 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
       )}
       {showTips && info && <Tips steps={info.steps} mistakes={info.mistakes} safety={info.safety} breathing={info.breathing} />}
     </section>
+  );
+}
+
+function agoLabel(date: string, today: string) {
+  const days = diffDays(date, today);
+  if (days <= 0) return "Earlier today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return "Last week";
+  return formatShortDate(date);
+}
+
+/** What was done for this exercise last time, and a nudge once the top of the range comes easy. */
+function LastTimeNote({ se, setNumber }: { se: SessionExercise; setNumber: number }) {
+  const { data, prefs } = useApp();
+  const today = useToday();
+  const last = useMemo(() => lastTimeFor(data, se, prefs.units), [data, se, prefs.units]);
+  if (!last) return null;
+  const set = last.entry.sets.find((s) => s.setNumber === setNumber);
+  const unit = se.targetUnit === "seconds" ? "s" : " reps";
+  return (
+    <div className="rounded-ctl border border-line bg-raised px-3 py-2.5 text-sm space-y-1">
+      <p>
+        <span className="font-semibold">{agoLabel(last.entry.date, today)}:</span> {last.summary}
+      </p>
+      {set && (
+        <p className="text-muted">
+          Set {setNumber} then: {set.durationSeconds ?? set.reps ?? "—"}
+          {unit}
+          {set.weight !== null ? ` at ${set.weight} ${prefs.units}` : ""}
+        </p>
+      )}
+      {last.progress && (
+        <p className="flex items-start gap-1.5 font-semibold text-accent-text">
+          <Icon name="arrowUp" size={16} className="mt-0.5 shrink-0" />
+          {last.progress.kind === "weight"
+            ? `Top of your range two sessions in a row. Try ${last.progress.weight} ${prefs.units} (+${last.progress.step}).`
+            : `Top of your range two sessions in a row. Try ${se.targetUnit === "seconds" ? "holding a few seconds longer" : "a rep or two more"}.`}
+        </p>
+      )}
+    </div>
   );
 }
 
