@@ -68,125 +68,107 @@ export function LilySpray({ className }: { className?: string }) {
 
 // ---------------------------------------------------------------- Summit
 
-/** A small bird seen from afar: two curved wings that flap. */
-function Bird({ x, y, s = 1, delay = 0 }: { x: number; y: number; s?: number; delay?: number }) {
+// The mountains never move. What moves is what really would at dusk: clouds drifting through the
+// valley, mist rising and thinning, the low sun's glow breathing, a flag on the summit, and stars
+// at night. All of it stays in the landscape, away from text, and stops with reduced motion.
+
+// Wide cards show only the lower half of the scene, so the sun, clouds and flag all sit low.
+const FAR = "M0 100 L40 80 L70 66 L104 84 L150 56 L186 82 L222 104 L258 80 L300 60 L344 82 L372 72 L400 84 L400 140 L0 140 Z";
+const MID = "M0 116 L44 96 L90 110 L130 88 L170 108 L208 118 L246 112 L280 94 L330 112 L370 98 L400 108 L400 140 L0 140 Z";
+const NEAR = "M0 134 L52 114 L100 126 L150 106 L204 128 L262 118 L318 132 L366 116 L400 126 L400 140 L0 140 Z";
+const SNOW = "M70 66 L78 73 L73 72 L67 76 L62 72 Z M150 56 L159 65 L153 64 L146 69 L140 65 Z M300 60 L308 68 L302 67 L296 71 L291 67 Z";
+
+/** A soft cloud: overlapping puffs that fade at the edges. */
+function Cloud({ x, y, s = 1, fill }: { x: number; y: number; s?: number; fill: string }) {
   return (
-    <g transform={`translate(${x} ${y}) scale(${s})`}>
-      <path className="summit-flap" style={{ animationDelay: `${delay}s` }} d="M-6 0 Q-3 -3.4 0 0 Q3 -3.4 6 0" fill="none" stroke="var(--ink)" strokeWidth="1.3" strokeLinecap="round" opacity="0.55" />
+    <g transform={`translate(${x} ${y}) scale(${s})`} fill={fill}>
+      <ellipse cx="0" cy="0" rx="26" ry="5.5" />
+      <ellipse cx="-9" cy="-3.5" rx="11" ry="5" />
+      <ellipse cx="6" cy="-4.5" rx="13" ry="6" />
+      <ellipse cx="18" cy="-1.5" rx="9" ry="4" />
     </g>
   );
 }
 
 /**
- * Three layered mountain ridges under a sunset sun. It glows gently, a wisp of cloud drifts
- * behind the peaks and two birds glide across now and then.
+ * A mountain range at dusk: three ranges with a low sun setting into the valley between the
+ * peaks. Clouds drift through the valley, mist rises and thins in front of the ranges and the
+ * sun's glow breathes; `flag` adds a small flag fluttering on the nearest summit. `soft` is the
+ * fainter version that sits behind the whole page, without the sun.
  */
-export function Ridge({ className }: { className?: string }) {
+function Landscape({ className, flag, soft }: { className?: string; flag?: boolean; soft?: boolean }) {
   const id = useId().replace(/:/g, "");
+  const op = soft ? [0.5, 0.3, 0.2] : [1, 1, 1];
   return (
     <svg viewBox="0 0 400 140" preserveAspectRatio="xMidYMax slice" className={className} aria-hidden="true" focusable="false">
       <defs>
         <radialGradient id={`glow-${id}`}>
-          <stop offset="0" stopColor="var(--sun)" stopOpacity="0.45" />
+          <stop offset="0.3" stopColor="var(--sun)" stopOpacity="0.55" />
           <stop offset="1" stopColor="var(--sun)" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id={`wisp-${id}`}>
-          <stop offset="0" stopColor="var(--surface)" stopOpacity="0.9" />
-          <stop offset="1" stopColor="var(--surface)" stopOpacity="0" />
+        <radialGradient id={`puff-${id}`} cx="0.5" cy="0.6">
+          <stop offset="0" stopColor="var(--cloud)" stopOpacity="0.95" />
+          <stop offset="0.7" stopColor="var(--cloud)" stopOpacity="0.6" />
+          <stop offset="1" stopColor="var(--cloud)" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`mist-${id}`}>
+          <stop offset="0" stopColor="var(--cloud)" stopOpacity="0.8" />
+          <stop offset="1" stopColor="var(--cloud)" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <g className="summit-sun">
-        <circle cx="318" cy="44" r="34" fill={`url(#glow-${id})`} />
-        <circle cx="318" cy="44" r="17" fill="var(--sun)" />
+      {/* the low sun in the valley, its glow slowly breathing (not behind the page: it would show through cards) */}
+      {!soft && (
+        <>
+          <circle className="summit-glow" cx="222" cy="95" r="40" fill={`url(#glow-${id})`} />
+          <circle cx="222" cy="95" r="12" fill="var(--sun)" />
+        </>
+      )}
+      <path d={FAR} fill="var(--ridge-far)" opacity={op[0]} />
+      <path d={SNOW} fill="var(--surface)" opacity={soft ? 0.4 : 0.85} />
+      <g className="summit-cloud" style={{ ["--cloud-time" as string]: "75s" }}>
+        <Cloud x={0} y={90} s={1.1} fill={`url(#puff-${id})`} />
       </g>
-      <g className="summit-wisp">
-        <ellipse cx="60" cy="58" rx="46" ry="6" fill={`url(#wisp-${id})`} />
-        <ellipse cx="88" cy="52" rx="26" ry="4" fill={`url(#wisp-${id})`} />
+      <g className="summit-cloud" style={{ ["--cloud-time" as string]: "105s", animationDelay: "-60s" }}>
+        <Cloud x={0} y={80} s={0.8} fill={`url(#puff-${id})`} />
       </g>
-      <g className="summit-glide-card">
-        <Bird x={0} y={30} s={0.9} />
-        <Bird x={16} y={22} s={0.7} delay={0.3} />
+      <path d={MID} fill="var(--ridge-mid)" opacity={op[1]} />
+      <g className="summit-mist">
+        <ellipse cx="110" cy="114" rx="90" ry="7" fill={`url(#mist-${id})`} />
+        <ellipse cx="300" cy="118" rx="80" ry="6" fill={`url(#mist-${id})`} />
       </g>
-      <path d="M0 104 L34 78 L62 92 L110 50 L150 82 L196 58 L236 86 L292 40 L340 74 L372 60 L400 70 L400 140 L0 140 Z" fill="var(--ridge-far)" />
-      <path d="M0 118 L48 92 L86 108 L142 70 L178 98 L226 76 L270 106 L318 82 L366 104 L400 92 L400 140 L0 140 Z" fill="var(--ridge-mid)" />
-      <path d="M0 134 L56 112 L104 126 L160 100 L214 124 L262 108 L320 130 L370 116 L400 124 L400 140 L0 140 Z" fill="var(--ridge-near)" />
-      <path d="M110 50 L120 60 L114 59 L106 64 L100 59 Z M292 40 L302 50 L296 49 L288 54 L282 50 Z" fill="var(--surface)" opacity="0.85" />
+      <path d={NEAR} fill="var(--ridge-near)" opacity={op[2]} />
+      {flag && (
+        <g>
+          <line x1="150" y1="106.5" x2="150" y2="90" stroke="var(--ink)" strokeWidth="1.1" strokeLinecap="round" />
+          <path className="summit-flag" d="M150.4 90.2 L161 92.6 L150.4 95.8 Z" fill="var(--accent)" />
+        </g>
+      )}
     </svg>
   );
 }
 
-/** A ridge line repeated twice across 800 units (one period is 400), so it can scroll seamlessly. */
-function tiledRidge(points: [number, number][]): string {
-  const pts = [...points, ...points.slice(1).map(([x, y]): [number, number] => [x + 400, y])];
-  return `M0 140 ${pts.map(([x, y]) => `L${x} ${y}`).join(" ")} L800 140 Z`;
+/** The mountain scene along the bottom of the Today card, with a flag on the summit. */
+export function Ridge({ className }: { className?: string }) {
+  return <Landscape className={className} flag />;
 }
-const FAR_RIDGE = tiledRidge([[0, 78], [40, 60], [72, 70], [118, 36], [160, 64], [204, 46], [246, 70], [300, 28], [344, 58], [372, 48], [400, 78]]);
-const MID_RIDGE = tiledRidge([[0, 96], [48, 74], [86, 88], [142, 56], [180, 82], [226, 62], [270, 90], [318, 68], [366, 86], [400, 96]]);
-const NEAR_RIDGE = tiledRidge([[0, 120], [56, 100], [104, 113], [160, 90], [214, 111], [262, 97], [320, 117], [370, 103], [400, 120]]);
-const SNOW = [118, 300, 518, 700].map((x, i) => {
-  const y = i % 2 ? 28 : 36;
-  return `M${x} ${y} L${x + 9} ${y + 9} L${x + 3} ${y + 8} L${x - 4} ${y + 12} L${x - 9} ${y + 8} Z`;
-}).join(" ");
+
 // a fixed scatter of stars for the dark sky
-const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 53.7) % 100, y: (i * 37.3) % 34, r: i % 3 ? 1 : 1.6, d: (i * 0.77) % 4 }));
+const STARS = Array.from({ length: 18 }, (_, i) => ({ x: (i * 53.7) % 100, y: (i * 37.3) % 30, r: i % 3 ? 1 : 1.6, d: (i * 0.77) % 4 }));
 
 /**
- * The Summit backdrop: a mountain landscape at dusk. The ranges drift slowly sideways (the nearer
- * the faster), mist drifts between them, the sun glows, birds cross the sky now and then, the
- * contour map slowly shifts, and in dark mode the stars twinkle. Everything only moves or fades,
- * which phones handle cheaply, and it all stops when reduced motion is on.
+ * The Summit backdrop: the contour map, and a faint mountain landscape along the bottom of the
+ * screen (the same living scene as the Today card). At night the stars twinkle.
  */
 function SummitScape() {
-  const id = useId().replace(/:/g, "");
-  const layer = (d: string, fill: string, op: number, secs: number) => (
-    <svg viewBox="0 0 800 140" preserveAspectRatio="xMinYMax slice" className="summit-drift absolute bottom-0 left-0 h-full w-[200%]" style={{ ["--drift" as string]: `${secs}s` }}>
-      <path d={d} fill={fill} opacity={op} />
-    </svg>
-  );
-  const mist = (y: string, op: number, secs: number) => (
-    <svg viewBox="0 0 800 40" preserveAspectRatio="none" className="summit-drift absolute left-0 h-[22%] w-[200%]" style={{ bottom: y, ["--drift" as string]: `${secs}s` }}>
-      <defs>
-        <radialGradient id={`mist-${id}`}>
-          <stop offset="0" stopColor="var(--surface)" stopOpacity={op} />
-          <stop offset="1" stopColor="var(--surface)" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      {[60, 250, 330, 460, 650, 730].map((x, i) => (
-        <ellipse key={i} cx={x} cy={20 + (i % 3) * 3} rx={i % 2 ? 90 : 130} ry="12" fill={`url(#mist-${id})`} />
-      ))}
-    </svg>
-  );
   return (
     <>
-      <div className="absolute -inset-[4%] summit-topo">
-        <Topo className="w-full h-full opacity-[0.08]" />
-      </div>
-      <div className="summit-stars absolute inset-x-0 top-0 h-[45vh]">
+      <Topo className="absolute inset-0 w-full h-full opacity-[0.07]" />
+      <div className="summit-stars absolute inset-x-0 top-0 h-[40vh]">
         {STARS.map((s, i) => (
-          <span key={i} className="summit-twinkle absolute rounded-full bg-[var(--ink)]" style={{ left: `${s.x}%`, top: `${s.y + 4}%`, width: s.r * 2, height: s.r * 2, animationDelay: `${s.d}s` }} />
+          <span key={i} className="summit-twinkle absolute rounded-full bg-[var(--ink)]" style={{ left: `${s.x}%`, top: `${s.y + 3}%`, width: s.r * 2, height: s.r * 2, animationDelay: `${s.d}s` }} />
         ))}
       </div>
-      {/* a setting sun low on the horizon, partly behind the ranges */}
-      <div className="summit-sun absolute right-[12vw] bottom-[13vh] w-[26vw] max-w-48 aspect-square rounded-full" style={{ background: "radial-gradient(circle, var(--sun) 0 22%, color-mix(in srgb, var(--sun) 35%, transparent) 23%, transparent 70%)", opacity: 0.5 }} />
-      <svg viewBox="0 0 100 40" className="summit-glide absolute top-[14vh] left-0 w-28 md:w-36" style={{ ["--glide" as string]: "42s" }}>
-        <Bird x={20} y={20} s={1.6} />
-        <Bird x={38} y={12} s={1.2} delay={0.25} />
-        <Bird x={52} y={24} s={1} delay={0.5} />
-      </svg>
-      <svg viewBox="0 0 100 40" className="summit-glide absolute top-[30vh] left-0 w-20 md:w-24" style={{ ["--glide" as string]: "57s", animationDelay: "-23s" }}>
-        <Bird x={30} y={20} s={1.4} delay={0.4} />
-        <Bird x={50} y={14} s={1.1} delay={0.1} />
-      </svg>
-      <div className="absolute inset-x-0 bottom-0 h-[34vh] max-h-[340px] min-h-[200px] overflow-hidden">
-        {layer(FAR_RIDGE, "var(--ridge-far)", 0.55, 140)}
-        <svg viewBox="0 0 800 140" preserveAspectRatio="xMinYMax slice" className="summit-drift absolute bottom-0 left-0 h-full w-[200%]" style={{ ["--drift" as string]: "140s" }}>
-          <path d={SNOW} fill="var(--surface)" opacity="0.5" />
-        </svg>
-        {mist("40%", 0.55, 90)}
-        {layer(MID_RIDGE, "var(--ridge-mid)", 0.32, 95)}
-        {mist("18%", 0.45, 60)}
-        {layer(NEAR_RIDGE, "var(--ridge-near)", 0.22, 60)}
-      </div>
+      <Landscape soft className="absolute inset-x-0 bottom-0 h-[36vh] max-h-[360px] min-h-[200px] w-full" />
     </>
   );
 }
