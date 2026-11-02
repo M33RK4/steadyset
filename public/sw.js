@@ -3,7 +3,7 @@
 // - Hashed build files, icons and fonts: cache first (their names change on every deploy).
 // - Everything else, including Supabase (another origin), goes straight to the network —
 //   account data syncs through the app's own offline queue, never through this cache.
-const VERSION = "v1";
+const VERSION = "v2"; // bump when files under /icons/ change (they are cached by name)
 const PAGES = `steadyset-pages-${VERSION}`;
 const ASSETS = `steadyset-assets-${VERSION}`;
 

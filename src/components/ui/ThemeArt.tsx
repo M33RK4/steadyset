@@ -270,23 +270,22 @@ export function BrandMark({ size = 36 }: { size?: number }) {
       <svg viewBox="0 0 512 512" width={size} height={size}>
         <defs>
           <linearGradient id={`bm-${id}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#1f3d66" />
-            <stop offset="1" stopColor="#16201a" />
+            <stop offset="0" stopColor="#21406b" />
+            <stop offset="1" stopColor="#142235" />
           </linearGradient>
         </defs>
         <rect width="512" height="512" fill={`url(#bm-${id})`} />
-        <g transform="rotate(-90 256 256)" fill="none" strokeWidth="30" strokeLinecap="round">
-          <circle cx="256" cy="256" r="168" stroke="#9cc9f0" strokeDasharray="790 1056" />
-          <circle cx="256" cy="256" r="168" stroke="#6e9071" strokeDasharray="0 800 230 1056" />
+        {/* the ring: two arcs with equal gaps, symmetric about the dumbbell's diagonal */}
+        <g fill="none" strokeWidth="32" strokeLinecap="round">
+          <path d="M279.4 89.6A168 168 0 1 1 89.6 279.4" stroke="#9cc9f0" />
+          <path d="M89.6 232.6A168 168 0 0 1 232.6 89.6" stroke="#7fa883" />
         </g>
-        <g transform="translate(256 256) scale(0.82) rotate(-30)" fill="#ffffff">
-          <rect x="-92" y="-14" width="184" height="28" rx="10" />
-          <rect x="-142" y="-78" width="40" height="156" rx="14" />
-          <rect x="102" y="-78" width="40" height="156" rx="14" />
-          <rect x="-176" y="-52" width="30" height="104" rx="11" />
-          <rect x="146" y="-52" width="30" height="104" rx="11" />
-          <rect x="-100" y="-22" width="12" height="44" rx="4" fill="#e2ad3b" />
-          <rect x="88" y="-22" width="12" height="44" rx="4" fill="#e2ad3b" />
+        <g transform="translate(256 256) scale(0.86) rotate(-45)" fill="#ffffff">
+          <rect x="-74" y="-11" width="148" height="22" rx="11" />
+          <rect x="-108" y="-76" width="36" height="152" rx="13" />
+          <rect x="72" y="-76" width="36" height="152" rx="13" />
+          <rect x="-142" y="-52" width="26" height="104" rx="11" />
+          <rect x="116" y="-52" width="26" height="104" rx="11" />
         </g>
       </svg>
     </span>

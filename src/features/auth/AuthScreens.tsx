@@ -8,17 +8,14 @@ import { passwordProblems, requestPasswordReset, resendVerification, signIn, sig
 import { getSupabase } from "@/lib/supabase/client";
 import { Button, Field, Spinner } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/ThemeArt";
 
 function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   return (
     <div className="min-h-dvh grid place-items-center px-4 py-10 hero-surface">
       <div className="w-full max-w-md space-y-5">
         <Link href="/" className="flex items-center gap-2 justify-center">
-          <span className="h-9 w-9 rounded-[10px] bg-accent text-accent-ink grid place-items-center" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-              <path d="M4 15h4M10 11v8M14 7v12M18 11v4" />
-            </svg>
-          </span>
+          <BrandMark />
           <span className="brand text-2xl">Steadyset</span>
         </Link>
         <main className="card p-6 sm:p-8 space-y-5">
