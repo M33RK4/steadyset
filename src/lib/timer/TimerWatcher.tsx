@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../store/AppStore";
 import { isStale, markAlerted, tick } from "./restTimer";
-import { playDing, showNotification, vibrate } from "../audio/alerts";
+import { playChime, showNotification, vibrate } from "../audio/alerts";
 
 /** Re-render periodically while `running` (display only — correctness comes from timestamps). */
 export function useNow(running: boolean, intervalMs = 250): number {
@@ -23,10 +23,10 @@ export function useNow(running: boolean, intervalMs = 250): number {
 }
 
 /**
- * Mounted once in the app shell so the rest timer finishes (and dings) no matter which screen
+ * Mounted once in the app shell so the rest timer finishes (and chimes) no matter which screen
  * is open. Completion is checked by an exact setTimeout at the target time, a 1s safety
  * interval, and whenever the tab becomes visible — whichever happens first wins, and the
- * persisted `alerted` flag guarantees the ding plays only once.
+ * persisted `alerted` flag guarantees the chime plays only once.
  */
 export function TimerWatcher() {
   const { active, setActive, prefs } = useApp();
@@ -46,7 +46,7 @@ export function TimerWatcher() {
         const stale = isStale(state, now);
         if (!stale) {
           const p = prefsRef.current;
-          if (p.soundEnabled) playDing();
+          if (p.soundEnabled) playChime();
           vibrate();
           if (document.visibilityState === "hidden" && p.notificationsEnabled) {
             showNotification("Rest finished", "Time for your next set!", `rest-${state.runId}`);

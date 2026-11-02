@@ -17,7 +17,7 @@ export interface TimerState {
   /** Which exercise/set the rest leads into. */
   sessionExerciseId: string | null;
   nextSetNumber: number | null;
-  /** True once the ding/notification for this run has been played (never play twice). */
+  /** True once the chime/notification for this run has been played (never play twice). */
   alerted: boolean;
   finishedAt: number | null;
 }
@@ -111,7 +111,7 @@ export function clearTimer(): TimerState {
 /**
  * Advance the timer to `now`. `shouldAlert` is true exactly once per run: the first time the
  * countdown is observed at zero and no alert has been played yet. The caller plays the sound
- * and then calls `markAlerted`, which is persisted — so reloads never replay the ding.
+ * and then calls `markAlerted`, which is persisted — so reloads never replay the chime.
  */
 export function tick(t: TimerState, now: number): { state: TimerState; shouldAlert: boolean } {
   if (t.status === "running" && t.endsAt !== null && now >= t.endsAt) {

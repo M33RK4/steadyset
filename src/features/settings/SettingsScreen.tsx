@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { THEMES } from "@/lib/themes";
 import { REST_PRESETS } from "@/lib/timer/restTimer";
-import { notificationPermission, playDing, requestNotificationPermission, unlockAudio } from "@/lib/audio/alerts";
+import { notificationPermission, playChime, requestNotificationPermission, unlockAudio } from "@/lib/audio/alerts";
 import { deleteAccount, requestPasswordReset } from "@/lib/auth/auth";
 import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
 import { Button, Field, NumberStepper, PageHeader, Segmented, Switch, cx } from "@/components/ui/primitives";
@@ -148,16 +148,16 @@ export function SettingsScreen() {
             </div>
           </div>
           <div className="divide-y divide-line">
-            <Switch label="Timer sound" description="A short ding when rest is over. With sound off you still get the on-screen alert." checked={prefs.soundEnabled} onChange={(v) => setPrefs({ soundEnabled: v })} />
+            <Switch label="Timer sound" description="A short three-note chime when rest is over. With sound off you still get the on-screen alert." checked={prefs.soundEnabled} onChange={(v) => setPrefs({ soundEnabled: v })} />
             <div className="py-3 flex items-center justify-between gap-3">
-              <span className="text-sm text-muted">Check your volume — the ding follows your device's media volume and silent mode.</span>
+              <span className="text-sm text-muted">Check your volume — the chime follows your device's media volume and silent mode.</span>
               <Button
                 variant="secondary"
                 size="sm"
                 icon="volume"
                 onClick={() => {
                   unlockAudio();
-                  const ok = playDing();
+                  const ok = playChime();
                   if (!ok) toast("Your browser blocked audio — tap again or check its sound settings.", { tone: "error" });
                 }}
               >
