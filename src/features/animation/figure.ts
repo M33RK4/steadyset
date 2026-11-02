@@ -131,6 +131,11 @@ export interface Pose {
    * the elbows appear; the arms are drawn through them and `hands` are then exact.
    */
   elbows?: [Pt, Pt];
+  /**
+   * With `elbows`: between poses the upper arms swing round the shoulders and the forearms round
+   * the elbows (a rowing arm, arms folded on a hinging body), instead of gliding in straight lines.
+   */
+  swingArms?: boolean;
 }
 
 export const rad = (d: number) => (d * Math.PI) / 180;
@@ -238,6 +243,8 @@ export interface Joints {
   ankle: [Pt, Pt];
   toe: [Pt, Pt];
   headAngle: number;
+  /** How far the ponytail's tip trails or swings on from the head's recent movement (follow-through). */
+  sway?: Pt;
 }
 
 /**
@@ -378,6 +385,18 @@ export function lerpPose(a: Pose, b: Pose, t: number): Pose {
     const jb = joints(b);
     pose.elbows = at(ja.elbow, jb.elbow);
     pose.hands = at(ja.hand, jb.hand);
+    if (a.swingArms || b.swingArms) {
+      // or swing: each bone turns about the joint it hangs from, keeping its length
+      const turn = (from: Pt, pa: Pt, pb: Pt, qa: Pt, qb: Pt): Pt => {
+        const u = sub(pa, qa);
+        const v = sub(pb, qb);
+        const a0 = angleOf([0, 0], u);
+        return dir(a0 + wrap(angleOf([0, 0], v) - a0) * t, lerp(len(u), len(v), t), from);
+      };
+      const sh = joints(pose).shoulder;
+      pose.elbows = [0, 1].map((i) => turn(sh, ja.elbow[i], jb.elbow[i], ja.shoulder, jb.shoulder)) as [Pt, Pt];
+      pose.hands = [0, 1].map((i) => turn(pose.elbows![i], ja.hand[i], jb.hand[i], ja.elbow[i], jb.elbow[i])) as [Pt, Pt];
+    }
   }
   if (a.knees || b.knees) {
     // legs turning out of the side-on view: knees, ankles and toes glide between where they appear
@@ -606,9 +625,11 @@ function head(j: Joints): Shape[] {
     const back = mul(face, -1);
     const hang = unit(add([0, 1], mul(back, 0.45)));
     const base = P(-7.6, 2.6);
-    const p1 = add(add(base, mul(back, 2.6)), mul(hang, 1.6));
-    const p2 = add(p1, mul(hang, 5));
-    const p3 = add(p2, mul(hang, 5.4));
+    // follow-through: the hair lags behind the head's movement and swings on a little when it stops
+    const sw = j.sway ?? [0, 0];
+    const p1 = add(add(add(base, mul(back, 2.6)), mul(hang, 1.6)), mul(sw, 0.3));
+    const p2 = add(add(p1, mul(hang, 5)), mul(sw, 0.35));
+    const p3 = add(add(p2, mul(hang, 5.4)), mul(sw, 0.35));
     // on the floor it spreads out beyond the top of the head (smoothly, whichever way that is)
     const away = clamp(up[0] * 2, -1, 1);
     const spine = [base, p1, p2, p3].map((p): Pt => (p[1] > FLOOR - 1.6 ? [p[0] + away * (p[1] - FLOOR + 1.6) * 0.9, FLOOR - 1.6] : p));

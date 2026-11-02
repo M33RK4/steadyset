@@ -34,6 +34,8 @@ test("the new exercises are in the library", () => {
   for (const s of ["leg-extension", "lying-leg-curl", "preacher-curl", "chin-up", "db-wrist-curl", "db-reverse-wrist-curl", "farmers-carry", "db-walking-lunge", "cable-rope-hammer-curl", "crunch", "decline-sit-up", "russian-twist", "db-standing-calf-raise", "db-seated-calf-raise", "adductor-rock-back", "lunge-rock", "seated-straight-leg-raise", "side-lunge-rock", "ninety-ninety-foot-lift", "ninety-ninety-knee-lift", "pigeon-backbend", "supine-knee-drop", "side-sit-leg-lift", "low-lunge-quad-stretch", "kneel-to-squat", "couch-stretch", "ninety-ninety-switch"]) assert.ok(slugs.has(s), s);
   // back and core additions
   for (const s of ["back-extension-45", "machine-back-extension", "barbell-romanian-deadlift", "cable-romanian-deadlift", "cable-pull-through", "barbell-good-morning", "cable-good-morning", "superman", "bird-dog", "pull-up", "db-single-arm-row", "cable-face-pull", "wide-grip-cable-row", "reverse-pec-deck", "reverse-crunch", "high-plank", "reverse-plank", "slow-mountain-climber"]) assert.ok(slugs.has(s), s);
+  // triceps additions
+  for (const s of ["db-overhead-triceps-extension", "cable-overhead-triceps-extension", "skull-crusher", "bench-dip", "db-triceps-kickback", "close-grip-push-up"]) assert.ok(slugs.has(s), s);
   assert.equal(new Set(BUILT_IN_EXERCISES.map((e) => e.id)).size, BUILT_IN_EXERCISES.length, "ids are unique");
 });
 
