@@ -27,6 +27,18 @@ export function Dialog({
   const titleId = useId();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  // Stays on screen briefly after closing, to slide away, showing what it showed when it was open.
+  const [shown, setShown] = useState(open);
+  const content = useRef({ title, description, children, footer });
+  if (open) content.current = { title, description, children, footer };
+  useEffect(() => {
+    if (open) {
+      setShown(true);
+      return;
+    }
+    const t = setTimeout(() => setShown(false), 200);
+    return () => clearTimeout(t);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,33 +77,36 @@ export function Dialog({
     };
   }, [open]);
 
-  if (!open || typeof document === "undefined") return null;
+  if ((!open && !shown) || typeof document === "undefined") return null;
+  const leaving = open ? undefined : "";
+  const c = content.current;
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-6">
-      <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
+    <div className={cx("fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-6", !open && "pointer-events-none")}>
+      <div className="dialog-scrim absolute inset-0 bg-black/45 md:backdrop-blur-[2px]" data-leaving={leaving} onClick={onClose} aria-hidden="true" />
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        data-leaving={leaving}
         className={cx(
-          "relative card anim-pop w-full max-h-[92dvh] overflow-y-auto rounded-b-none sm:rounded-b-[var(--r-card)]",
+          "dialog-panel relative card w-full max-h-[92dvh] overflow-y-auto rounded-b-none sm:rounded-b-[var(--r-card)]",
           size === "sm" ? "sm:max-w-md" : size === "lg" ? "sm:max-w-3xl" : "sm:max-w-xl",
         )}
       >
         <div className="sticky top-0 z-10 bg-surface flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 id={titleId} className="text-xl leading-snug">
-              {title}
+              {c.title}
             </h2>
-            {description && <div className="text-muted text-sm mt-1">{description}</div>}
+            {c.description && <div className="text-muted text-sm mt-1">{c.description}</div>}
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="h-10 w-10 -mr-2 -mt-1 grid place-items-center rounded-ctl hover:bg-raised shrink-0">
             <Icon name="x" size={20} />
           </button>
         </div>
-        {children && <div className="px-5 pb-5">{children}</div>}
-        {footer && <div className="sticky bottom-0 bg-surface border-t border-line px-5 py-4 flex flex-wrap justify-end gap-2">{footer}</div>}
+        {c.children && <div className="px-5 pb-5">{c.children}</div>}
+        {c.footer && <div className="sticky bottom-0 bg-surface border-t border-line px-5 py-4 flex flex-wrap justify-end gap-2">{c.footer}</div>}
       </div>
     </div>,
     document.body,

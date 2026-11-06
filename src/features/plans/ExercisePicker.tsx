@@ -14,7 +14,7 @@ export function filterExercises(all: Exercise[], query: string, group: string | 
   return all.filter((e) => {
     if (group && !muscleGroupOf(e).includes(group)) return false;
     if (!q) return true;
-    return [e.name, ...e.primaryMuscles, ...e.secondaryMuscles, ...e.equipment].join(" ").toLowerCase().includes(q);
+    return [e.name, ...(e.aliases ?? []), ...e.primaryMuscles, ...e.secondaryMuscles, ...e.equipment].join(" ").toLowerCase().includes(q);
   });
 }
 

@@ -36,6 +36,9 @@ test("the new exercises are in the library", () => {
   for (const s of ["back-extension-45", "machine-back-extension", "barbell-romanian-deadlift", "cable-romanian-deadlift", "cable-pull-through", "barbell-good-morning", "cable-good-morning", "superman", "bird-dog", "pull-up", "db-single-arm-row", "cable-face-pull", "wide-grip-cable-row", "reverse-pec-deck", "reverse-crunch", "high-plank", "reverse-plank", "slow-mountain-climber"]) assert.ok(slugs.has(s), s);
   // triceps additions
   for (const s of ["db-overhead-triceps-extension", "cable-overhead-triceps-extension", "skull-crusher", "bench-dip", "db-triceps-kickback", "close-grip-push-up"]) assert.ok(slugs.has(s), s);
+  for (const s of ["chest-butterfly", "machine-chest-supported-row", "one-arm-triceps-kickback"]) assert.ok(slugs.has(s), s);
+  // every version an exercise points to exists
+  for (const e of BUILT_IN_EXERCISES) for (const v of e.variants ?? []) assert.ok(slugs.has(v), `${e.slug} → ${v}`);
   assert.equal(new Set(BUILT_IN_EXERCISES.map((e) => e.id)).size, BUILT_IN_EXERCISES.length, "ids are unique");
 });
 

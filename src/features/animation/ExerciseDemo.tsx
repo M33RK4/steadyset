@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { animationFor, type ExerciseAnimation } from "./library";
 import { withBody, type Shape } from "./figure";
 import { motionRuns, patchSvg, shapesToSvg } from "./render";
-import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
-import { musclesFor, type MuscleId } from "@/lib/data/muscles";
+import { currentPalette, musclesOf, requestThumb, thumbUrl } from "./thumbs";
+import type { MuscleId } from "@/lib/data/muscles";
 import { Icon } from "@/components/ui/Icon";
 import { cx } from "@/components/ui/primitives";
 import { useApp } from "@/lib/store/AppStore";
@@ -59,13 +59,94 @@ function AnimatedFigure({ anim, muscles, playing, viewBox, label }: { anim: Exer
   return <svg ref={ref} viewBox={viewBox} className="w-full h-auto block" role="img" aria-label={label} />;
 }
 
-/** The exercise's main muscles, which glow on the figure as it works. */
-function useMuscles(animation: string) {
+/** An exercise's animation, drawn with the same body as the muscle map (Settings → Exercise body). */
+function useBodyAnimation(animation: string, body: "male" | "female"): ExerciseAnimation {
   return useMemo(() => {
-    const ex = BUILT_IN_EXERCISES.find((e) => e.animation === animation);
-    // cardio and mobility work the whole body: no single muscle to highlight
-    return ex && ex.kind !== "cardio" && ex.kind !== "mobility" ? musclesFor(ex.primaryMuscles) : [];
-  }, [animation]);
+    const a = animationFor(animation);
+    return { ...a, at: (t, m) => withBody(body, () => a.at(t, m)) };
+  }, [animation, body]);
+}
+
+// One observer each, shared by every thumbnail in a list.
+const paletteWatchers = new Set<() => void>();
+let paletteObserver: MutationObserver | null = null;
+function watchPalette(cb: () => void) {
+  paletteObserver ??= new MutationObserver(() => paletteWatchers.forEach((w) => w()));
+  if (!paletteWatchers.size) paletteObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-mode"] });
+  paletteWatchers.add(cb);
+  return () => {
+    paletteWatchers.delete(cb);
+    if (!paletteWatchers.size) paletteObserver?.disconnect();
+  };
+}
+
+const nearScreen = new WeakMap<Element, () => void>();
+let nearObserver: IntersectionObserver | null = null;
+function whenNearScreen(el: Element, cb: () => void) {
+  nearObserver ??= new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        nearObserver?.unobserve(e.target);
+        nearScreen.get(e.target)?.();
+      }
+    },
+    { rootMargin: "500px 0px" },
+  );
+  nearScreen.set(el, cb);
+  nearObserver.observe(el);
+  return () => nearObserver?.unobserve(el);
+}
+
+/** A still picture for lists: a plain image, drawn once and kept (see thumbs.ts). */
+function Thumb({ animation, body, label, ratio }: { animation: string; body: "male" | "female"; label: string; ratio: string }) {
+  const palette = useSyncExternalStore(watchPalette, currentPalette, () => "");
+  const box = useRef<HTMLDivElement>(null);
+  const [image, setImage] = useState(() => {
+    const src = palette ? thumbUrl(palette, body, animation) : undefined;
+    return src ? { src, fresh: false } : null;
+  });
+  useEffect(() => {
+    if (!palette || !box.current) return;
+    const src = thumbUrl(palette, body, animation);
+    if (src) {
+      setImage({ src, fresh: false });
+      return;
+    }
+    let withdraw = () => {};
+    const stop = whenNearScreen(box.current, () => {
+      withdraw = requestThumb(palette, body, animation, (url) => setImage({ src: url, fresh: true }));
+    });
+    return () => {
+      stop();
+      withdraw();
+    };
+  }, [palette, body, animation]);
+  return (
+    <div ref={box} style={{ aspectRatio: ratio }}>
+      {image && <img src={image.src} alt={label} decoding="async" draggable={false} className={cx("block w-full h-full", image.fresh && "anim-thumb")} />}
+    </div>
+  );
+}
+
+/** Thumbnails show the key position and only animate under a mouse, to keep long lists light. */
+function CompactDemo({ animation, name }: { animation: string; name: string }) {
+  const { prefs } = useApp();
+  const body = prefs.bodyType ?? "female";
+  const [hover, setHover] = useState(false);
+  const { viewBox = "0 0 200 150", cue } = animationFor(animation);
+  const [, , w, h] = viewBox.split(" ");
+  const label = `Demonstration of ${name}: ${cue}`;
+  return (
+    <div className="relative rounded-ctl bg-raised overflow-hidden" onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)} onPointerLeave={() => setHover(false)}>
+      {hover ? <HoverFigure animation={animation} body={body} viewBox={viewBox} label={label} /> : <Thumb animation={animation} body={body} label={label} ratio={`${w} / ${h}`} />}
+    </div>
+  );
+}
+
+function HoverFigure({ animation, body, viewBox, label }: { animation: string; body: "male" | "female"; viewBox: string; label: string }) {
+  const anim = useBodyAnimation(animation, body);
+  return <AnimatedFigure anim={anim} muscles={musclesOf(animation)} playing viewBox={viewBox} label={label} />;
 }
 
 function prefersReducedMotion(): boolean {
@@ -81,38 +162,25 @@ function prefersReducedMotion(): boolean {
  * frame-by-frame view (start → finish with a direction cue) and can still press play.
  */
 export function ExerciseDemo({ animation, name, compact }: { animation: string; name: string; compact?: boolean }) {
-  // drawn with the same body as the muscle map (Settings → Exercise body)
+  return compact ? <CompactDemo animation={animation} name={name} /> : <FullDemo animation={animation} name={name} />;
+}
+
+function FullDemo({ animation, name }: { animation: string; name: string }) {
   const { prefs } = useApp();
-  const body = prefs.bodyType ?? "female";
-  const anim = useMemo((): ExerciseAnimation => {
-    const a = animationFor(animation);
-    return { ...a, at: (t, m) => withBody(body, () => a.at(t, m)) };
-  }, [animation, body]);
-  const muscles = useMuscles(animation);
+  const anim = useBodyAnimation(animation, prefs.bodyType ?? "female");
+  const muscles = musclesOf(animation);
   const viewBox = anim.viewBox ?? "0 0 200 150";
   const [playing, setPlaying] = useState(true);
   const [mode, setMode] = useState<"loop" | "frames">("loop");
-  const [hover, setHover] = useState(false);
-  const keyFrame = anim.frames[anim.frames.length > 1 ? 1 : 0].t;
-  const still = useMemo(() => anim.at(keyFrame, muscles), [anim, keyFrame, muscles]);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
       setPlaying(false);
-      if (!compact) setMode("frames");
+      setMode("frames");
     }
-  }, [compact]);
+  }, []);
 
   const label = `Demonstration of ${name}: ${anim.cue}`;
-
-  if (compact) {
-    // Thumbnails show the key position and only animate on hover, to keep long lists light.
-    return (
-      <div className="relative rounded-ctl bg-raised overflow-hidden" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-        {hover ? <AnimatedFigure anim={anim} muscles={muscles} playing viewBox={viewBox} label={label} /> : <ExerciseFigure shapes={still} viewBox={viewBox} label={label} />}
-      </div>
-    );
-  }
 
   return (
     <figure className="rounded-card bg-raised border border-line overflow-hidden">

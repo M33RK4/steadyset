@@ -2,16 +2,13 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
-// Installing Steadyset as an app: registers the service worker and keeps hold of the browser's
-// install prompt (Chrome / Edge / Samsung Internet on Android fire `beforeinstallprompt`), so
-// Settings can offer an "Install app" button instead of sending people to the browser menu.
+// Installing Steadyset as an app: registers the service worker and works out what "Install app"
+// should do on this device. Android gets the APK (served from public/); iPhones can't run one, so
+// they get Add to Home Screen instead.
 
-interface InstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+/** The Android app: it opens the live site, so it updates with every deploy. */
+export const APK_URL = "/steadyset.apk";
 
-let deferred: InstallPromptEvent | null = null;
 let installed = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -20,29 +17,29 @@ let started = false;
 function start() {
   if (started || typeof window === "undefined") return;
   started = true;
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault(); // keep it for our own button
-    deferred = e as InstallPromptEvent;
-    emit();
-  });
+  // Chrome's own "Install app" prompt would offer a second, different install next to the APK
+  window.addEventListener("beforeinstallprompt", (e) => e.preventDefault());
   window.addEventListener("appinstalled", () => {
-    deferred = null;
     installed = true;
     emit();
   });
 }
 
-/** Running as the installed app (opened from the home-screen icon). */
+/** Running as the installed app (the APK, or opened from a home-screen icon). */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true || document.referrer.startsWith("android-app://");
 }
 
-export type InstallState = "installed" | "available" | "manual";
+function isIOS(): boolean {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+export type InstallState = "installed" | "ios" | "apk";
 
 function snapshot(): InstallState {
   if (installed || isStandalone()) return "installed";
-  return deferred ? "available" : "manual";
+  return isIOS() ? "ios" : "apk";
 }
 
 export function useInstallState(): InstallState {
@@ -53,19 +50,8 @@ export function useInstallState(): InstallState {
       return () => listeners.delete(l);
     },
     snapshot,
-    () => "manual",
+    () => "apk",
   );
-}
-
-/** Shows the browser's install dialog. Resolves to whether the app was installed. */
-export async function promptInstall(): Promise<boolean> {
-  if (!deferred) return false;
-  const e = deferred;
-  await e.prompt();
-  const { outcome } = await e.userChoice;
-  deferred = null;
-  emit();
-  return outcome === "accepted";
 }
 
 /** Mounted once in the app shell. Service workers only run in production builds. */
@@ -76,5 +62,25 @@ export function useServiceWorker() {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       /* the app still works without offline support */
     });
+  }, []);
+}
+
+/**
+ * Press-and-hold on a phone: an app has no "Open in new tab" menu and nothing to drag out. Text
+ * fields keep theirs, for paste and select. (A mouse's right-click is left alone.)
+ */
+export function useTouchLikeAnApp() {
+  useEffect(() => {
+    if (!matchMedia("(pointer: coarse)").matches && !isStandalone()) return;
+    const block = (e: Event) => {
+      if ((e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) return;
+      e.preventDefault();
+    };
+    document.addEventListener("contextmenu", block);
+    document.addEventListener("dragstart", block);
+    return () => {
+      document.removeEventListener("contextmenu", block);
+      document.removeEventListener("dragstart", block);
+    };
   }, []);
 }

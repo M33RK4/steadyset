@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     // No "orientation" lock on purpose: on Android 8.0.0 a fixed orientation combined with Chrome's
     // see-through launch screen makes the installed app crash on start ("Steadyset has stopped").
-    background_color: "#e9f3fc",
+    background_color: "#14243a",
     theme_color: "#1f3d66",
     categories: ["health", "fitness", "lifestyle"],
     icons: [

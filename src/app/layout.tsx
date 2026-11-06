@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Bricolage_Grotesque, Instrument_Serif, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Splash } from "@/components/shell/Splash";
+import { SPLASH_COLOR } from "@/lib/pwa/splash";
 
 const instrument = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap" });
 const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap" });
@@ -21,10 +23,6 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#e9f3fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1524" },
-  ],
 };
 
 // Applies the saved theme and light/dark mode before first paint so there's no flash of the
@@ -35,9 +33,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-theme="lily" data-mode="light" data-motion="system" suppressHydrationWarning className={`${instrument.variable} ${bricolage.variable} ${manrope.variable}`}>
       <head>
+        {/* Written by hand and kept up to date by syncSystemBars. Declared in `viewport` instead,
+            Next.js would put its own fixed colours back on every change of screen. */}
+        <meta name="theme-color" content={SPLASH_COLOR} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
+        <Splash />
         <Providers>{children}</Providers>
       </body>
     </html>

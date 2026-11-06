@@ -2260,6 +2260,143 @@ const tricepsKickback: ExerciseAnimation = (() => {
   };
 })();
 
+/** The one-arm version, one knee and hand on the bench: the free forearm swings back until the arm is straight. */
+const oneArmKickback: ExerciseAnimation = (() => {
+  const base: Pose = { hip: [82, 73], torso: [-8, -8], head: -2, hands: [[124, 101], [0, 0]], feet: [[54, 101], [68, 133]], footAngle: [180, 0], handKind: ["flat", "fist"], wrist: [-75, 0] };
+  const bent = rowArms(base, [null, 172], 92);
+  const straight = rowArms(base, [null, 172], 173);
+  return {
+    cycle: 4.2,
+    cue: "One knee and hand on the bench, upper arm along the body: the forearm swings back until the arm is straight, then lowers slowly.",
+    frames: [
+      { t: 0, label: "Forearm hanging" },
+      { t: 0.45, label: "Arm straight back" },
+    ],
+    at: side(
+      [
+        { pose: bent, hold: 0.12, move: 0.34 },
+        { pose: straight, hold: 0.14, move: 0.4 },
+      ],
+      (j) => ({ back: [shadow(96, 130), ...bench(40, 138, 104, 6)], front: dumbbell(j.grip[1], j.handAngle[1] + 90, 0.95) }),
+      (j) => j.grip[1],
+    ),
+  };
+})();
+
+/** Chest-supported row on a machine: chest on the pad, handles on a lever from above, the stack in front. */
+const machineChestSupportedRow: ExerciseAnimation = (() => {
+  const hip: Pt = [64, 100];
+  const pivot: Pt = [97, 14];
+  const body: Pick<Pose, "hip" | "torso" | "head" | "feet"> = { hip, torso: [-82, -82], head: -78, feet: [[96, 133], [99, 133]] };
+  return {
+    cycle: 4.5,
+    cue: "Chest stays on the pad while the handles pull straight back to the ribs and the elbows drive behind the body.",
+    frames: [
+      { t: 0, label: "Arms straight" },
+      { t: 0.45, label: "Handles at the ribs" },
+    ],
+    at: side(
+      [
+        { pose: { ...body, hands: [[116, 66], [118, 66]] }, hold: 0.12, move: 0.34 },
+        { pose: { ...body, hands: [[77, 68], [79, 68]] }, hold: 0.14, move: 0.42 },
+      ],
+      (j, k) => {
+        const stack = weightStack(152, 30, { lift: k * 14 });
+        const top: Pt = [stack.cable[0], pivot[1] + 3];
+        return {
+          back: [
+            shadow(100, 180),
+            ...baseRail(26, 186),
+            ...stack.shapes,
+            ...tube([140, FLOOR - 3], [140, pivot[1]], 2.6),
+            ...tube([pivot[0] - 4, pivot[1]], [184, pivot[1]], 2.4),
+            ...cable([stack.cable, top, pivot]),
+            ...pulley(top, 3.2, -k * 160),
+            ...tube([hip[0], 112], [hip[0], FLOOR - 3], 2.6),
+            ...pad(hip[0] - 20, hip[1] + 4, 44, 8),
+            ...tube([88, 78], [140, 78], 2.2),
+            ...padAlong([81, 92], [87, 58], 9, 3.6),
+            ...pulley(pivot, 3.4, k * 60),
+          ],
+          // the lever runs from above, on the far side of the near arm; only the near handle is in front of the hand
+          far: [...tube(pivot, add(j.grip[0], [0, -5]), 2), ...grip(j.grip[0], 90, 9), ...tube(pivot, add(j.grip[1], [0, -5]), 2)],
+          front: grip(j.grip[1], 90, 9),
+        };
+      },
+      (j) => j.grip[1],
+    ),
+  };
+})();
+
+/**
+ * Chest butterfly (pec deck), seen from the front with the back against the pad: the arms sweep in
+ * from out at the sides until the hands meet in front of the chest. An arm reaching toward the
+ * viewer is drawn a little lower, as if seen from just above, so it never shrinks to nothing as it turns.
+ */
+const chestButterfly: ExerciseAnimation = (() => {
+  const base = frontJoints({ arm: 90, elbowBend: 0, spread: 0, seated: true });
+  const y = base.shoulders[0][1];
+  const OPEN = 82;
+  const CLOSED = -8;
+  const steps = [
+    { pose: { arm: OPEN, elbowBend: 0, spread: 0, seated: true }, hold: 0.12, move: 0.38 },
+    { pose: { arm: CLOSED, elbowBend: 0, spread: 0, seated: true }, hold: 0.16, move: 0.34 },
+  ];
+  const poseAt = keyframes(lerpFront, steps);
+  // `arm` here is how far each arm has swung round from straight ahead (0°) to out to the side (90°)
+  const armsAt = (swing: number): Pick<FrontJoints, "elbows" | "hands"> => {
+    const reach = (from: Pt, side: number, a: number, len: number): Pt => [from[0] + side * len * Math.sin(rad(a)), from[1] + len * Math.cos(rad(a)) * 0.3];
+    const [sl, sr] = base.shoulders;
+    const elbows: [Pt, Pt] = [reach([sl[0], y + 1], -1, swing, 23), reach([sr[0], y + 1], 1, swing, 23)];
+    // a soft bend at the elbow, held all the way through
+    return { elbows, hands: [reach(elbows[0], -1, swing - 12, 21), reach(elbows[1], 1, swing - 12, 21)] };
+  };
+  const pivots: [Pt, Pt] = [[74, y - 14], [126, y - 14]];
+  const path = guide(Array.from({ length: 12 }, (_, i): Pt => add(armsAt(lerp(OPEN, CLOSED, i / 11)).hands[1], [0, -13])));
+  return {
+    cycle: 4.2,
+    viewBox: "0 0 200 150",
+    cue: "Seen from the front, back on the pad: the arms sweep in from the sides until the hands meet in front of the chest, squeeze, then open slowly.",
+    frames: [
+      { t: 0, label: "Arms open" },
+      { t: 0.45, label: "Hands together" },
+    ],
+    at: (t: number, muscles: MuscleId[] = []): Shape[] => {
+      const { pose, k } = poseAt(t);
+      const j: FrontJoints = { ...base, ...armsAt(pose.arm) };
+      const b = frontLayers(j, muscles, k);
+      const stack = weightStack(176, 30, { lift: k * 12, w: 18 });
+      // a lever from a pivot beside each shoulder down to the upright handle in each hand
+      const levers = j.hands.flatMap((h, i): Shape[] => [...tube(pivots[i], [h[0], h[1] - 9], 1.9), ...tube([h[0], h[1] - 9], [h[0], h[1] + 7], 1.6), ...grip(h, 90, 9)]);
+      return [
+        ...stage(),
+        shadow(100, 150),
+        ...stack.shapes,
+        ...tube([100, FLOOR - 3], [100, 10], 3.4),
+        ...tube([60, 10], [186, 10], 2.6),
+        ...cable([stack.cable, [184, 14], [104, 14]]),
+        ...tube([70, FLOOR - 3], [130, FLOOR - 3], 2.2),
+        foot(72),
+        foot(128),
+        ...pad(76, 92, 48, 8, 3),
+        ...tube(pivots[0], pivots[1], 2.4),
+        ...pad(78, 30, 44, 62, 6),
+        ...b.legs,
+        ...b.shorts,
+        ...b.shirt,
+        ...b.glow,
+        ...b.head,
+        ...b.sleeves,
+        ...b.arms,
+        ...levers,
+        ...pulley(pivots[0], 2.6, k * 60),
+        ...pulley(pivots[1], 2.6, -k * 60),
+        ...path,
+      ];
+    },
+  };
+})();
+
 const closeGripPushUp: ExerciseAnimation = {
   cycle: 4.2,
   cue: "Hands close together under the chest: the body lowers in one straight line with the elbows tucked back, then pushes up.",
@@ -2366,6 +2503,9 @@ export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "bench-dip": benchDip,
   "db-triceps-kickback": tricepsKickback,
   "close-grip-push-up": closeGripPushUp,
+  "chest-butterfly": chestButterfly,
+  "machine-chest-supported-row": machineChestSupportedRow,
+  "one-arm-triceps-kickback": oneArmKickback,
   generic,
 };
 

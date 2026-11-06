@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { cx } from "./primitives";
 
@@ -208,8 +208,23 @@ export function Topo({ className }: { className?: string }) {
 /** Fixed, faint decoration behind every page. */
 export function Backdrop() {
   const { prefs } = useApp();
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let timer = 0;
+    const onScroll = () => {
+      root.current?.classList.add("art-rest");
+      clearTimeout(timer);
+      timer = window.setTimeout(() => root.current?.classList.remove("art-rest"), 160);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(timer);
+    };
+  }, []);
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+    // its own layer: scrolling the page over it never has to repaint it
+    <div ref={root} className="fixed inset-0 -z-10 overflow-hidden pointer-events-none will-change-transform [contain:strict]" aria-hidden="true">
       <div className="absolute inset-0" style={{ background: "radial-gradient(60% 50% at 85% 0%, var(--bg-glow) 0%, transparent 70%), radial-gradient(50% 40% at 0% 100%, var(--bg-glow) 0%, transparent 70%)" }} />
       {prefs.theme === "lily" ? (
         <>

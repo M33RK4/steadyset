@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { startTransition, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useApp } from "@/lib/store/AppStore";
 import { THEMES, resolveMode } from "@/lib/themes";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -14,8 +15,10 @@ import { remainingMs } from "@/lib/timer/restTimer";
 import { formatClock } from "@/lib/util/dates";
 import { liveOf, useBuddies } from "@/features/buddies/BuddiesProvider";
 import { ReminderWatcher } from "./ReminderWatcher";
-import { useServiceWorker } from "@/lib/pwa/install";
-import { GlassIndicator } from "./GlassIndicator";
+import { useServiceWorker, useTouchLikeAnApp } from "@/lib/pwa/install";
+import { GlassIndicator, SPRING, SPRING_MS, reducedMotion, type GlassHandle } from "./GlassIndicator";
+import { clearOldThumbs, currentPalette, prepareThumbs } from "@/features/animation/thumbs";
+import { dismissSplash } from "@/lib/pwa/splash";
 
 const NAV: { href: string; label: string; short: string; icon: IconName; dock: boolean }[] = [
   { href: "/", label: "Today", short: "Today", icon: "home", dock: true },
@@ -35,8 +38,19 @@ function isActive(path: string, href: string) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname() ?? "/";
-  const { mode, configured, ready } = useApp();
+  const { mode, configured, ready, prefs } = useApp();
   useServiceWorker();
+  useTouchLikeAnApp();
+  useEffect(() => {
+    if (ready) dismissSplash();
+  }, [ready]);
+  // while nothing else is happening, get the exercise pictures ready before they're asked for
+  useEffect(() => {
+    if (!ready) return;
+    clearOldThumbs();
+    const t = setTimeout(() => prepareThumbs(currentPalette(), prefs.bodyType ?? "female"), 1500);
+    return () => clearTimeout(t);
+  }, [ready, prefs.theme, prefs.colorMode, prefs.bodyType]);
   const activeTab = NAV.find((n) => isActive(path, n.href))?.href ?? null;
   const tabIndex = NAV.findIndex((n) => n.href === activeTab);
   // A different tab glides in from its side; anything else (sub-pages, first load) just rises in.
@@ -113,63 +127,158 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Phones & tablets: a floating dock; the current tab grows to show its name under a sliding glass pill. */
+/**
+ * Phones & tablets: a floating dock; the current tab grows to show its name under a sliding glass
+ * pill. The pill can be held and dragged along the dock: the tab under it lights up as it passes
+ * and letting go opens it.
+ *
+ * Everything that moves here is a browser-run animation, started the moment a tab is touched and
+ * before the next screen starts being built, so the dock never waits for that screen.
+ */
 function MobileDock({ path, active }: { path: string; active: string | null }) {
-  const docked = NAV.some((n) => n.dock && n.href === active) ? active : null;
+  const current = NAV.some((n) => n.dock && n.href === active) ? active : null;
   const router = useRouter();
-  // Hold the glass pill and slide it to another tab; letting go there opens that tab.
-  const [dragX, setDragX] = useState<number | null>(null);
-  const [release, setRelease] = useState(0);
-  const press = useRef<{ x0: number; id: number; dragging: boolean } | null>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const glass = useRef<GlassHandle>(null);
+
+  // The tab being opened is shown as current straight away, while its screen is on its way.
+  const [opening, setOpening] = useState<string | null>(null);
+  const shown = opening ?? current;
+  useEffect(() => setOpening(null), [path]);
+  useEffect(() => {
+    if (!opening) return;
+    const t = setTimeout(() => setOpening(null), 8000); // it never arrived (no connection)
+    return () => clearTimeout(t);
+  }, [opening]);
+
+  // The icons glide to their new places when a tab grows. The tabs themselves change size at once:
+  // nothing but their icons can be seen, so only the icons need to move.
+  const iconX = useRef(new Map<HTMLElement, number>());
+  const remember = () => {
+    list.current?.querySelectorAll<HTMLElement>("[data-tab-icon]").forEach((icon) => iconX.current.set(icon, icon.getBoundingClientRect().left));
+  };
+  useLayoutEffect(() => {
+    const reduce = reducedMotion();
+    list.current?.querySelectorAll<HTMLElement>("[data-tab-icon]").forEach((icon) => {
+      icon.getAnimations().forEach((a) => a.cancel());
+      const was = iconX.current.get(icon);
+      const dx = was === undefined ? 0 : was - icon.getBoundingClientRect().left;
+      if (dx && !reduce) {
+        try {
+          icon.animate([{ translate: `${dx}px 0` }, { translate: "0 0" }], { duration: SPRING_MS, easing: SPRING });
+        } catch {
+          /* no spring curves in this browser: it simply arrives */
+        }
+      }
+    });
+    remember();
+  }, [shown]);
+
+  const open = (href: string) => {
+    remember();
+    flushSync(() => setOpening(href));
+  };
+
+  // Holding and dragging the pill. Refs and direct styles, not state: nothing re-renders per move.
+  const press = useRef<{ id: number; x: number; t: number; offset: number; lifted: boolean; dragging: boolean; over: string | null; timer: number } | null>(null);
   const justDragged = useRef(false);
-  const listX = (e: { clientX: number; currentTarget: Element }) => e.clientX - e.currentTarget.getBoundingClientRect().left;
-  const nearestTab = (ul: Element, clientX: number) => {
+  const tabUnder = (centre: number) => {
     let best: string | null = null;
-    let d = Infinity;
-    ul.querySelectorAll<HTMLElement>("[data-glass]").forEach((li) => {
+    let dist = Infinity;
+    list.current?.querySelectorAll<HTMLElement>("[data-glass]").forEach((li) => {
       const b = li.getBoundingClientRect();
-      const dd = Math.abs(clientX - (b.left + b.width / 2));
-      if (dd < d) {
-        d = dd;
+      const d = Math.abs(centre - (b.left + b.width / 2));
+      if (d < dist) {
+        dist = d;
         best = li.dataset.glass ?? null;
       }
     });
     return best as string | null;
   };
+  /** Each tab lights up as the pill comes over it. */
+  const lightTabs = (centre: number | null) => {
+    list.current?.querySelectorAll<HTMLElement>("[data-glass]").forEach((li) => {
+      const link = li.firstElementChild as HTMLElement;
+      if (centre === null) {
+        link.style.removeProperty("--near");
+        return;
+      }
+      const icon = li.querySelector<HTMLElement>("[data-tab-icon]")!.getBoundingClientRect();
+      link.style.setProperty("--near", String(Math.max(0, 1 - Math.abs(centre - (icon.left + icon.width / 2)) / 44).toFixed(3)));
+    });
+  };
+  const lift = (p: NonNullable<typeof press.current>) => {
+    if (p.lifted) return;
+    p.lifted = true;
+    glass.current?.lift();
+    list.current?.toggleAttribute("data-dragging", true);
+    navigator.vibrate?.(8);
+  };
+  const letGo = () => {
+    const p = press.current;
+    press.current = null;
+    if (!p) return null;
+    clearTimeout(p.timer);
+    list.current?.toggleAttribute("data-dragging", false);
+    lightTabs(null);
+    return p;
+  };
+
   return (
     <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),12px)]">
       <ul
-        className={cx("dock relative mx-auto max-w-md rounded-card flex items-center justify-between p-1.5", dragX !== null && "touch-none")}
+        ref={list}
+        className="dock relative mx-auto max-w-md rounded-card flex items-center justify-between p-1.5 touch-none"
         onPointerDown={(e) => {
           // only the current tab's glass pill can be picked up
           const li = (e.target as Element).closest<HTMLElement>("[data-glass]");
-          if (!li || li.dataset.glass !== docked) return;
-          press.current = { x0: e.clientX, id: e.pointerId, dragging: false };
+          if (!li || li.dataset.glass !== shown || !glass.current) return;
+          const p = { id: e.pointerId, x: e.clientX, t: e.timeStamp, offset: glass.current.centreOnScreen() - e.clientX, lifted: false, dragging: false, over: shown, timer: 0 };
+          // holding still for a moment picks it up too, so it answers before the finger moves
+          p.timer = window.setTimeout(() => press.current === p && lift(p), 140);
+          press.current = p;
         }}
         onPointerMove={(e) => {
           const p = press.current;
           if (!p || p.id !== e.pointerId) return;
-          if (!p.dragging && Math.abs(e.clientX - p.x0) < 8) return;
           if (!p.dragging) {
+            if (Math.abs(e.clientX - p.x) < 6) return;
             p.dragging = true;
+            lift(p);
             e.currentTarget.setPointerCapture(e.pointerId);
           }
-          setDragX(listX(e));
+          const centre = e.clientX + p.offset;
+          const left = e.currentTarget.getBoundingClientRect().left;
+          const speed = (e.clientX - p.x) / Math.max(1, e.timeStamp - p.t);
+          p.x = e.clientX;
+          p.t = e.timeStamp;
+          glass.current?.moveTo(centre - left, speed);
+          lightTabs(centre);
+          const over = tabUnder(centre);
+          if (over !== p.over) {
+            p.over = over;
+            navigator.vibrate?.(6); // a small tick as it crosses into each tab
+          }
         }}
-        onPointerUp={(e) => {
-          const p = press.current;
-          press.current = null;
-          if (!p?.dragging) return;
+        onPointerUp={() => {
+          const p = letGo();
+          if (!p) return;
+          if (!p.dragging) {
+            if (p.lifted) glass.current?.drop();
+            return; // a tap: the tab's link handles it
+          }
           justDragged.current = true;
-          const to = nearestTab(e.currentTarget, e.clientX);
-          setDragX(null);
-          setRelease((n) => n + 1);
-          if (to && to !== docked) router.push(to);
+          setTimeout(() => (justDragged.current = false), 350);
+          const to = p.over;
+          if (to && to !== shown) {
+            navigator.vibrate?.(12);
+            open(to);
+            glass.current?.drop();
+            startTransition(() => router.push(to));
+          } else glass.current?.drop();
         }}
         onPointerCancel={() => {
-          press.current = null;
-          setDragX(null);
-          setRelease((n) => n + 1);
+          if (letGo()?.lifted) glass.current?.drop();
         }}
         onClickCapture={(e) => {
           // the click that ends a drag must not also open the tab under the finger's start
@@ -180,20 +289,26 @@ function MobileDock({ path, active }: { path: string; active: string | null }) {
           }
         }}
       >
-        <GlassIndicator activeKey={docked} className="rounded-btn" dragX={dragX} release={release} />
+        <GlassIndicator activeKey={shown} handle={glass} />
         {NAV.filter((n) => n.dock).map((n) => {
-          const on = isActive(path, n.href);
+          const on = shown === n.href;
           return (
-            <li key={n.href} data-glass={n.href} className={cx("relative transition-[flex-grow] duration-300 ease-[cubic-bezier(0.3,1.2,0.4,1)]", on ? "grow-[2.2]" : "grow")}>
+            <li key={n.href} data-glass={n.href} className={cx("relative min-w-0 basis-0", on ? "grow-[2.2]" : "grow")}>
               <Link
                 href={n.href}
                 draggable={false}
-                aria-current={on ? "page" : undefined}
+                aria-current={isActive(path, n.href) ? "page" : undefined}
                 aria-label={n.label}
-                className={cx("relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px] transition-colors duration-300", on && dragX === null ? "text-accent-ink px-3" : on ? "text-muted px-3" : "text-muted hover:text-ink")}
+                data-on={on || undefined}
+                onClick={(e) => {
+                  if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !on) open(n.href);
+                }}
+                className="dock-tab relative flex items-center justify-center gap-1.5 h-12 rounded-btn font-bold text-[13px]"
               >
-                <Icon name={n.icon} size={21} />
-                {on && <span className="truncate anim-label">{n.short}</span>}
+                <span data-tab-icon className="grid place-items-center">
+                  <Icon name={n.icon} size={21} />
+                </span>
+                <span className={cx("dock-label truncate", on && "dock-label-on")}>{n.short}</span>
                 {n.href === "/buddies" && <BuddyLiveDot />}
               </Link>
             </li>
@@ -207,7 +322,7 @@ function MobileDock({ path, active }: { path: string; active: string | null }) {
 function DesktopNav({ path, active }: { path: string; active: string | null }) {
   return (
     <nav aria-label="Main" className="hidden lg:flex relative items-center gap-1 mr-auto">
-      <GlassIndicator activeKey={active} className="rounded-btn" />
+      <GlassIndicator activeKey={active} />
       {NAV.map((n) => (
         <NavLink key={n.href} href={n.href} active={isActive(path, n.href)} icon={n.icon} label={n.label} />
       ))}

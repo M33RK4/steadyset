@@ -19,6 +19,10 @@ export interface Exercise {
   name: string;
   /** A short plain-language "what is this exercise" — built-ins only; custom exercises may not have one. */
   summary?: string;
+  /** Other names people know it by, for search — built-ins only. */
+  aliases?: string[];
+  /** Slugs of other versions of the same movement (with a machine, one arm...) — built-ins only. */
+  variants?: string[];
   kind: ExerciseKind;
   primaryMuscles: string[];
   secondaryMuscles: string[];

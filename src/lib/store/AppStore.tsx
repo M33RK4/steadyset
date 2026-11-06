@@ -13,6 +13,7 @@ import { guestHasMeaningfulData, guestImportChanges } from "./migration";
 import { browserKV, KEYS } from "./persistence";
 import { signOut as authSignOut } from "../auth/auth";
 import { normalizePreferences, resolveMode } from "../themes";
+import { syncSystemBars } from "../pwa/splash";
 
 export type SyncState = {
   online: boolean;
@@ -69,13 +70,19 @@ const systemDark = () => typeof window !== "undefined" && window.matchMedia?.("(
 function applyDocumentPrefs(p: Preferences) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.dataset.theme = p.theme;
-  root.dataset.mode = resolveMode(p.colorMode, systemDark());
+  const mode = resolveMode(p.colorMode, systemDark());
+  const changed = root.dataset.theme !== p.theme || root.dataset.mode !== mode;
   root.dataset.motion = p.reducedMotion;
   browserKV.set(KEYS.theme, { theme: p.theme, colorMode: p.colorMode, motion: p.reducedMotion });
-  // The phone's status bar (and the installed app's title bar) takes the theme's background.
-  const bg = getComputedStyle(root).getPropertyValue("--bg").trim();
-  if (bg) document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", bg));
+  const apply = () => {
+    root.dataset.theme = p.theme;
+    root.dataset.mode = mode;
+    syncSystemBars();
+  };
+  // switching themes or light/dark: a soft cross-fade of the whole screen instead of a hard cut
+  const still = p.reducedMotion === "reduce" || (p.reducedMotion !== "allow" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  if (changed && !still && document.startViewTransition) document.startViewTransition(apply);
+  else apply();
 }
 
 /** Older saved data can carry themes that no longer exist. */

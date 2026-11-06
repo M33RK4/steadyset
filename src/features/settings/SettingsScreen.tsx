@@ -9,13 +9,12 @@ import { REST_PRESETS } from "@/lib/timer/restTimer";
 import { notificationPermission, playChime, requestNotificationPermission, unlockAudio } from "@/lib/audio/alerts";
 import { deleteAccount, requestPasswordReset } from "@/lib/auth/auth";
 import { BUILT_IN_EXERCISES } from "@/lib/data/exercises";
-import { Button, Field, NumberStepper, PageHeader, Segmented, Switch, cx } from "@/components/ui/primitives";
+import { Button, Field, NumberStepper, PageHeader, Segmented, Switch, buttonClass, cx } from "@/components/ui/primitives";
 import { Dialog, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { LilyFlower, Ridge } from "@/components/ui/ThemeArt";
 import type { ThemeId } from "@/lib/domain/types";
-import { promptInstall, useInstallState } from "@/lib/pwa/install";
-import { ApkLink } from "@/components/ui/ApkLink";
+import { APK_URL, useInstallState } from "@/lib/pwa/install";
 
 function Section({ id, title, children, description }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
@@ -395,44 +394,23 @@ function ThemePreview({ theme }: { theme: ThemeId }) {
 
 function InstallSection() {
   const state = useInstallState();
-  const toast = useToast();
   return (
     <Section id="app" title="Get the app" description="Install Steadyset on your phone: it gets its own icon, opens full-screen and works without a connection.">
       {state === "installed" ? (
         <p className="flex items-center gap-2 font-semibold text-done">
           <Icon name="check" size={20} /> Steadyset is installed on this device.
         </p>
-      ) : state === "available" ? (
-        <div className="space-y-3">
-          <Button
-            icon="download"
-            onClick={async () => {
-              if (await promptInstall()) toast("Steadyset is on your home screen", { tone: "success" });
-            }}
-          >
-            Install app
-          </Button>
-          <p className="text-sm">
-            <ApkLink />
-          </p>
-        </div>
+      ) : state === "ios" ? (
+        <p className="text-sm text-muted">
+          The app is only available on Android for now. On iPhone or iPad, open this page in Safari, tap <span className="font-bold text-ink">Share</span>, then <span className="font-bold text-ink">Add to Home Screen</span>.
+        </p>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-3 text-sm">
-          <div className="tile p-4 space-y-1">
-            <p className="font-bold">Android</p>
-            <p className="text-muted">
-              Open this page in Chrome, tap the <span className="font-bold text-ink">⋮</span> menu, then <span className="font-bold text-ink">Install app</span> (or <span className="font-bold text-ink">Add to Home screen</span>).
-            </p>
-            <p className="pt-1">
-              <ApkLink />
-            </p>
-          </div>
-          <div className="tile p-4 space-y-1">
-            <p className="font-bold">iPhone / iPad</p>
-            <p className="text-muted">
-              Open this page in Safari, tap <span className="font-bold text-ink">Share</span>, then <span className="font-bold text-ink">Add to Home Screen</span>.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <a href={APK_URL} download="Steadyset.apk" className={buttonClass()}>
+            <Icon name="download" size={20} />
+            Install app
+          </a>
+          <p className="text-sm text-muted">Only available on Android. Your phone may ask you to allow the install.</p>
         </div>
       )}
     </Section>

@@ -266,6 +266,28 @@
     background: var(--bg);
     -webkit-tap-highlight-color: transparent;
   }
+  /* Phones: pressing and holding does nothing a browser would, and text only selects in fields. */
+  @media (pointer: coarse) {
+    html {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    input,
+    textarea,
+    select,
+    [contenteditable] {
+      -webkit-touch-callout: default;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    a,
+    img,
+    svg {
+      -webkit-user-drag: none;
+    }
+  }
   body {
     background: var(--bg);
     color: var(--ink);
@@ -385,6 +407,42 @@
 [data-theme="summit"] main .card .card {
   background: transparent;
   backdrop-filter: none;
+}
+/* Phones: the frosting is left out, a touch more solid instead. Re-blurring what's behind every
+   card, for every frame of scrolling, is the most expensive thing a screen here could do. */
+@media (hover: none) {
+  [data-theme="lily"] main .card {
+    background: color-mix(in srgb, var(--surface) 76%, transparent);
+    backdrop-filter: none;
+  }
+  [data-theme="lily"][data-mode="dark"] main .card {
+    background: color-mix(in srgb, var(--surface) 74%, transparent);
+  }
+  [data-theme="summit"] main .card {
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    backdrop-filter: none;
+  }
+  [data-theme] main .card .card {
+    background: transparent;
+  }
+  /* cards you can tap answer to the finger */
+  a.card,
+  button.card,
+  button.tile,
+  a.tile {
+    transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  a.card:active,
+  button.card:active,
+  button.tile:active,
+  a.tile:active {
+    transform: scale(0.975);
+    transition-duration: 0.08s;
+  }
+}
+/* The art behind the page holds still during a scroll, so all the frames go to the scrolling. */
+.art-rest * {
+  animation-play-state: paused !important;
 }
 
 /* Lily: headings breathe a little more, and <em> inside a heading turns to italic accent. */
@@ -518,7 +576,7 @@
    pieces of the page arrive one after another so it reads as a new place, not a reload. */
 .page-from-right,
 .page-from-left {
-  animation: page-in 0.46s cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
+  animation: page-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .page-from-right {
   --page-dx: 28px;
@@ -528,7 +586,7 @@
 }
 .page-from-right > * > *,
 .page-from-left > * > * {
-  animation: page-piece 0.5s cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
+  animation: page-piece 0.46s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .page-from-right > * > :nth-child(2),
 .page-from-left > * > :nth-child(2) {
@@ -546,7 +604,6 @@
   from {
     opacity: 0;
     transform: translateX(var(--page-dx)) scale(0.985);
-    filter: blur(3px);
   }
 }
 @keyframes page-piece {
@@ -555,23 +612,70 @@
     transform: translateY(10px);
   }
 }
-/* The tab name fading in as its pill grows */
-.anim-label {
-  animation: label-in 0.35s 0.08s ease-out backwards;
+/* A thumbnail arriving after the list is already on screen */
+.anim-thumb {
+  animation: thumb-in 0.28s ease-out backwards;
+}
+@keyframes thumb-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The dock's tabs: a tab's colour runs from muted to lit by how close the glass pill is (--near,
+   which is 1 on the current tab and follows the pill while it's dragged). */
+.dock-tab {
+  color: color-mix(in srgb, var(--accent-ink) calc(var(--near, 0) * 100%), var(--muted));
+  transition: color 0.26s ease-out;
+}
+.dock-tab[data-on] {
+  --near: 1;
+}
+.dock-tab [data-tab-icon] {
+  transition: scale 0.18s ease-out;
+}
+[data-dragging] .dock-tab {
+  transition: color 0.08s linear;
+}
+[data-dragging]:not([data-refract]) .dock-tab [data-tab-icon] {
+  scale: calc(1 + var(--near, 0) * 0.16);
+}
+/* Under clear glass an icon keeps the page's own ink: it's the glass that changes how it looks. */
+[data-dragging][data-refract] .dock-tab {
+  color: color-mix(in srgb, var(--ink) calc(var(--near, 0) * 100%), var(--muted));
+}
+/* The tab name fades in as its tab grows, and out where it was as the tab shrinks. */
+.dock-label {
+  position: absolute;
+  left: 50%;
+  max-width: 5em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+.dock-label-on {
+  position: static;
+  max-width: none;
+  opacity: 1;
+  animation: label-in 0.34s 0.05s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 @keyframes label-in {
   from {
     opacity: 0;
-    transform: translateX(-4px);
+    transform: translateX(-6px);
   }
 }
 
 /* The sliding tab highlight: a pill of tinted glass with a bright rim and a soft sheen on top. */
 .glass-pill {
-  will-change: transform, width;
+  will-change: translate, scale;
+  transition:
+    opacity 0.2s ease-out,
+    background-color 0.18s ease-out;
+  /* the same bubble in every theme, whatever shape the theme's buttons are */
+  border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 78%, transparent);
   backdrop-filter: blur(12px) saturate(170%);
-  -webkit-backdrop-filter: blur(12px) saturate(170%);
   box-shadow:
     inset 0 1px 0.5px rgb(255 255 255 / 0.55),
     inset 0 -1px 1px rgb(0 0 0 / 0.12),
@@ -580,6 +684,43 @@
     0 1px 3px rgb(0 0 0 / 0.12);
   transform-origin: 50% 50%;
   overflow: hidden;
+}
+/* Held: picked up off the dock, a lens over one tab at a time. */
+.glass-pill[data-held] {
+  scale: 1.08 1.14;
+  transition:
+    opacity 0.2s ease-out,
+    background-color 0.14s ease-out,
+    z-index 0s 0.1s,
+    width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-left 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.14s ease-out;
+  box-shadow:
+    inset 0 1px 0.5px rgb(255 255 255 / 0.6),
+    inset 0 -1px 1px rgb(0 0 0 / 0.12),
+    inset 0 0 0 1px rgb(255 255 255 / 0.24),
+    0 10px 24px -6px color-mix(in srgb, var(--accent) 80%, transparent),
+    0 2px 6px rgb(0 0 0 / 0.16);
+}
+/* Held where the browser can bend light: clear glass on top of the icons, which it refracts as it
+   passes over them. Its tint clears first, so nothing dims as it rises above them. */
+[data-refract] .glass-pill[data-held] {
+  z-index: 2;
+  background-color: color-mix(in srgb, var(--accent) 7%, rgb(255 255 255 / 0.05));
+  backdrop-filter: url(#glass-lens) brightness(1.04) saturate(1.2);
+  box-shadow:
+    inset 0 1.5px 1px rgb(255 255 255 / 0.7),
+    inset 0 -1.5px 1.5px rgb(255 255 255 / 0.28),
+    inset 0 0 0 1px rgb(255 255 255 / 0.3),
+    inset 0 0 8px rgb(255 255 255 / 0.12),
+    0 8px 22px -6px rgb(0 0 0 / 0.35),
+    0 2px 5px rgb(0 0 0 / 0.14);
+}
+[data-refract] .glass-pill[data-held]::before {
+  opacity: 0.32;
+}
+[data-refract] .glass-pill[data-held]::after {
+  opacity: 0.5;
 }
 .glass-pill::before {
   /* the curved highlight across the top half, like light on a glass bead */
@@ -600,6 +741,170 @@
 }
 .anim-pop {
   animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+/* Dialogs: a sheet that slides up from the bottom on phones, a soft pop in the middle on wide
+   screens, and the same in reverse when they close. */
+.dialog-scrim {
+  animation: scrim-in 0.24s ease-out backwards;
+}
+.dialog-scrim[data-leaving] {
+  animation: scrim-out 0.2s ease-in forwards;
+}
+.dialog-panel {
+  animation: sheet-up 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.dialog-panel[data-leaving] {
+  animation: sheet-down 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@media (min-width: 640px) {
+  .dialog-panel {
+    animation: pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+  }
+  .dialog-panel[data-leaving] {
+    animation: pop-out 0.16s ease-in forwards;
+  }
+}
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes pop-out {
+  to {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+/* Theme and light/dark changes cross-fade softly. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.32s;
+  animation-timing-function: ease-in-out;
+}
+
+/* The loading screen: the logo assembles itself, then opens up onto the app. Each part is its own
+   layer that only rotates, scales and fades, so it stays smooth while the app starts underneath. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: radial-gradient(75% 55% at 50% 46%, #21406b 0%, #14243a 100%);
+  /* if the app somehow never reports ready, the screen still gets out of the way */
+  animation: splash-out 0.3s 8s forwards;
+}
+.splash[hidden] {
+  display: none;
+}
+.splash-mark {
+  position: relative;
+  width: min(46vw, 190px);
+  aspect-ratio: 1;
+  will-change: transform, opacity;
+}
+.splash-mark > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform, opacity;
+}
+.splash-glow {
+  inset: -12%;
+  width: 124%;
+  height: 124%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(156 201 240 / 0.3), transparent 64%);
+  animation: splash-glow 1.5s 0.35s ease-in-out infinite alternate backwards;
+}
+.splash-arc-blue {
+  animation: splash-arc-blue 0.82s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.splash-arc-green {
+  animation: splash-arc-green 0.82s 0.05s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.splash-bell {
+  animation: splash-bell 0.72s 0.1s cubic-bezier(0.2, 1.3, 0.35, 1) backwards;
+}
+.splash-word {
+  color: #ffffff;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  will-change: transform, opacity;
+  animation: splash-word 0.6s 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.splash[data-out] {
+  pointer-events: none;
+  animation: splash-out 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.splash[data-out] .splash-mark,
+.splash[data-out] .splash-word {
+  animation: splash-part-out 0.36s cubic-bezier(0.4, 0, 0.7, 1) forwards;
+}
+@keyframes splash-arc-blue {
+  from {
+    transform: rotate(-150deg) scale(0.78);
+    opacity: 0;
+  }
+}
+@keyframes splash-arc-green {
+  from {
+    transform: rotate(140deg) scale(0.78);
+    opacity: 0;
+  }
+}
+@keyframes splash-bell {
+  from {
+    transform: rotate(-38deg) scale(0.55);
+    opacity: 0;
+  }
+}
+@keyframes splash-word {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+@keyframes splash-glow {
+  from {
+    transform: scale(0.92);
+    opacity: 0.35;
+  }
+  to {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+@keyframes splash-part-out {
+  to {
+    transform: scale(1.14);
+    opacity: 0;
+  }
+}
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
 }
 .anim-pulse {
   animation: pulse-ring 2.4s ease-out infinite;

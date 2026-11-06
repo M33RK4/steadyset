@@ -1151,6 +1151,7 @@ export function frontLayers(j: FrontJoints, muscles: MuscleId[] = [], k = 0): Fr
       const sign = s === 0 ? -1 : 1;
       if (m === "sideDelts" || m === "frontDelts" || m === "rearDelts") glow.push(...ell(lerpPt(j.shoulders[s], j.elbows[s], 0.18), 4.4, 3.4, angleOf(j.shoulders[s], j.elbows[s])));
       if (m === "traps") glow.push(...ell([cx + sign * 8, j.neck[1] + 2], 5, 2.2, sign * 18));
+      if (m === "chest") glow.push(...ell([cx + sign * 6.6, j.neck[1] + 13], 5.6, 4, sign * 8));
       // outer hips (gluteus medius): high on the side of the hip
       if (m === "abductors") glow.push(...ell(j.seated ? [cx + sign * 15.6, j.pelvis[1] - 1] : [cx + sign * 14.5, j.pelvis[1] - 3], 3, 5.2, sign * 14));
       if (m === "glutes" && j.seated) glow.push(...ell([j.hips[s][0] + sign * 5, j.hips[s][1] + 4], 4, 3));

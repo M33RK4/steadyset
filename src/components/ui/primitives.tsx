@@ -25,6 +25,16 @@ const sizes: Record<Size, string> = {
   xl: "min-h-16 py-3 px-6 text-lg gap-2.5 text-left leading-tight [&>svg]:shrink-0",
 };
 
+/** The look of a Button, for links that should appear as one. */
+export function buttonClass({ variant = "primary", size = "md", block }: { variant?: Variant; size?: Size; block?: boolean } = {}) {
+  return cx(
+    "inline-flex items-center justify-center max-w-full rounded-btn font-bold select-none transition-[filter,background-color,transform,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none",
+    variants[variant],
+    sizes[size],
+    block && "w-full",
+  );
+}
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
@@ -44,13 +54,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cx(
-        "inline-flex items-center justify-center max-w-full rounded-btn font-bold select-none transition-[filter,background-color,transform,box-shadow] duration-150 disabled:opacity-50 disabled:pointer-events-none",
-        variants[variant],
-        sizes[size],
-        block && "w-full",
-        className,
-      )}
+      className={cx(buttonClass({ variant, size, block }), className)}
       {...rest}
     >
       {loading ? <Spinner /> : icon ? <Icon name={icon} size={size === "sm" ? 16 : size === "xl" ? 24 : 20} /> : null}

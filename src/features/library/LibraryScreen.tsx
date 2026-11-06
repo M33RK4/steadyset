@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import { upsert, del } from "@/lib/domain/changes";
 import type { Exercise, ExerciseKind } from "@/lib/domain/types";
@@ -16,12 +16,30 @@ import { muscleTargets } from "@/lib/data/muscles";
 import { useExercises } from "../common";
 import { filterExercises, SearchAndFilter } from "../plans/ExercisePicker";
 
+/** A screenful of cards straight away, the rest just after: opening never waits for the whole list. */
+function useGrowingCount(total: number, first = 8, step = 16) {
+  const [count, setCount] = useState(first);
+  useEffect(() => {
+    if (count >= total) return;
+    const grow = () => startTransition(() => setCount((c) => c + step));
+    if (typeof requestIdleCallback === "undefined") {
+      const t = setTimeout(grow, 60);
+      return () => clearTimeout(t);
+    }
+    const id = requestIdleCallback(grow, { timeout: 250 });
+    return () => cancelIdleCallback(id);
+  }, [count, total, step]);
+  return count;
+}
+
 export function LibraryScreen() {
   const { all } = useExercises();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const list = useMemo(() => filterExercises(all, query, group), [all, query, group]);
+  const shown = useGrowingCount(list.length);
   return (
     <div>
       <PageHeader
@@ -40,9 +58,10 @@ export function LibraryScreen() {
         </EmptyState>
       ) : (
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
-          {list.map((e) => (
+          {list.slice(0, shown).map((e) => (
             <li key={e.id}>
-              <Link href={`/library/${e.slug}`} className="card block overflow-hidden hover:border-accent transition-colors group">
+              {/* fetched on touch, not as each card scrolls into view: scrolling shouldn't cost data */}
+              <Link href={`/library/${e.slug}`} prefetch={false} onPointerDown={() => router.prefetch(`/library/${e.slug}`)} className="card block overflow-hidden hover:border-accent transition-colors group">
                 <div className="p-2">
                   <ExerciseDemo animation={e.animation} name={e.name} compact />
                 </div>
@@ -79,6 +98,7 @@ export function ExerciseDetailScreen() {
         It may have been a custom exercise that was deleted.
       </EmptyState>
     );
+  const others = all.filter((x) => e.variants?.includes(x.slug));
   const usedIn = data.planExercises.filter((pe) => pe.exerciseId === e.id);
   const usedDays = [...new Set(usedIn.map((u) => u.planDayId))].map((id) => data.planDays.find((d) => d.id === id)).filter(Boolean);
   return (
@@ -99,6 +119,19 @@ export function ExerciseDetailScreen() {
                 <Badge key={q}>{q}</Badge>
               ))}
             </div>
+            {others.length > 0 && (
+              <p className="text-sm text-muted mt-3">
+                Also available as{" "}
+                {others.map((o, i) => (
+                  <span key={o.id}>
+                    {i > 0 && ", "}
+                    <Link href={`/library/${o.slug}`} className="font-semibold text-ink underline underline-offset-2">
+                      {o.name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            )}
           </header>
           {e.summary && (
             <section>
