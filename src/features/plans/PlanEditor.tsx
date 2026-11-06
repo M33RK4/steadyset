@@ -9,7 +9,7 @@ import type { DayKind, Exercise, PlanDay, PlanExercise, TargetUnit, Weekday } fr
 import { orderedWeekdays, WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/util/dates";
 import { uuid } from "@/lib/util/ids";
 import { REST_PRESETS } from "@/lib/timer/restTimer";
-import { Badge, Button, EmptyState, Field, IconButton, Segmented, Switch, cx } from "@/components/ui/primitives";
+import { Badge, Button, EmptyState, Field, IconButton, Segmented, Switch, cx, useNumberDraft } from "@/components/ui/primitives";
 import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { ExercisePicker } from "./ExercisePicker";
@@ -673,20 +673,16 @@ function DayEditor({
 }
 
 function SmallNum({ label, value, onChange, min, max }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number }) {
+  const typing = useNumberDraft({ value, onChange: (v) => v !== null && onChange(v), min, max, integer: true });
   return (
     <label className="text-sm">
       <span className="text-muted block mb-1">{label}</span>
       <input
-        type="number"
         inputMode="numeric"
         className={cx("field h-10 min-h-0 py-1 num")}
-        value={value}
-        min={min}
-        max={max}
-        onChange={(e) => {
-          const n = Math.round(Number(e.target.value));
-          if (!Number.isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
-        }}
+        value={typing.text}
+        onChange={(e) => typing.change(e.target.value)}
+        onBlur={typing.settle}
       />
     </label>
   );

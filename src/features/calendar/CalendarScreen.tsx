@@ -6,6 +6,7 @@ import { addWorkoutOn, buildDay, moveDay, restoreDay, skipDay, type CalendarDay 
 import { activePlan, daysOfPlan, exercisesOfDay, formatTarget } from "@/lib/plans/planOps";
 import { deleteSession, isTimed, sessionExercisesOf, setsOf, updateSessionNotes } from "@/lib/session/sessionOps";
 import { addDays, addMonths, formatDuration, formatLongDate, formatMonthYear, monthGrid, orderedWeekdays, sameMonth, startOfWeek, WEEKDAY_SHORT, weekDates, weekdayOf } from "@/lib/util/dates";
+import { plural } from "@/lib/util/text";
 import { Badge, Button, IconButton, PageHeader, Segmented, cx } from "@/components/ui/primitives";
 import { Dialog, useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
@@ -98,9 +99,12 @@ function MonthView({ cursor, onSelect }: { cursor: string; onSelect: (d: string)
   );
 }
 
+/** A workout moved to another day counts as skipped on this one, but says what really happened. */
+const statusLabel = (d: CalendarDay) => (d.status === "skipped" && d.movedTo ? "Moved" : STATUS_LABEL[d.status]);
+
 function dayLabel(d: CalendarDay) {
-  const what = d.sessions[0]?.title ?? d.planned?.name ?? (d.skippedDay ? `${d.skippedDay.name} (skipped)` : "No workout");
-  return `${formatLongDate(d.date)}${d.isToday ? " (today)" : ""}: ${what}, ${STATUS_LABEL[d.status]}`;
+  const what = d.sessions[0]?.title ?? d.planned?.name ?? (d.skippedDay ? `${d.skippedDay.name} (${d.movedTo ? "moved" : "skipped"})` : "No workout");
+  return `${formatLongDate(d.date)}${d.isToday ? " (today)" : ""}: ${what}, ${statusLabel(d)}`;
 }
 
 function DayCell({ day, outside, onClick }: { day: CalendarDay; outside: boolean; onClick: () => void }) {
@@ -147,10 +151,10 @@ function WeekView({ cursor, onSelect }: { cursor: string; onSelect: (d: string) 
           </div>
           <div className="flex-1 min-w-0 space-y-1.5">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <StatusDot status={d.status} size={14} /> {STATUS_LABEL[d.status]}
+              <StatusDot status={d.status} size={14} /> {statusLabel(d)}
             </p>
             {d.planned && <p className="font-semibold text-sm leading-tight">{d.planned.name}</p>}
-            {d.planned && d.planned.kind === "strength" && <p className="text-xs text-muted">{exercisesOfDay(data, d.planned.id).length} exercises</p>}
+            {d.planned && d.planned.kind === "strength" && <p className="text-xs text-muted">{plural(exercisesOfDay(data, d.planned.id).length, "exercise")}</p>}
             {d.sessions.map((s) => (
               <p key={s.id} className="text-xs">
                 {s.title} · {formatDuration(s.durationSeconds)}
@@ -177,8 +181,8 @@ function AgendaView({ from, onSelect }: { from: string; onSelect: (d: string) =>
             </span>
             <StatusDot status={d.status} size={18} />
             <span className="flex-1 min-w-0">
-              <span className="block font-semibold truncate">{d.sessions[0]?.title ?? d.planned?.name ?? (d.skippedDay ? `${d.skippedDay.name} — skipped` : "No workout")}</span>
-              <span className="block text-sm text-muted">{STATUS_LABEL[d.status]}{d.plannedSource === "moved" ? " · moved here" : ""}</span>
+              <span className="block font-semibold truncate">{d.sessions[0]?.title ?? d.planned?.name ?? (d.skippedDay ? `${d.skippedDay.name} — ${d.movedTo ? "moved" : "skipped"}` : "No workout")}</span>
+              <span className="block text-sm text-muted">{statusLabel(d)}{d.plannedSource === "moved" ? " · moved here" : ""}</span>
             </span>
             <Icon name="chevronRight" size={18} className="text-muted" />
           </button>
@@ -208,7 +212,7 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
 
   return (
     <>
-      <Dialog open onClose={onClose} title={formatLongDate(date)} description={<span className="flex items-center gap-1.5"><StatusDot status={day.status} size={14} /> {STATUS_LABEL[day.status]}{day.isToday ? " · today" : ""}</span>} size="lg">
+      <Dialog open onClose={onClose} title={formatLongDate(date)} description={<span className="flex items-center gap-1.5"><StatusDot status={day.status} size={14} /> {statusLabel(day)}{day.isToday ? " · today" : ""}</span>} size="lg">
         <div className="space-y-6">
           {/* Planned */}
           <section className="space-y-2">
@@ -232,7 +236,7 @@ function DayPanel({ date, onClose }: { date: string; onClose: () => void }) {
                 )}
               </div>
             ) : (
-              <p className="text-muted">{day.skippedDay ? `${day.skippedDay.name} was skipped or moved.` : "Nothing scheduled."}</p>
+              <p className="text-muted">{day.movedTo ? `${day.skippedDay?.name} was moved to ${formatLongDate(day.movedTo)}.` : day.skippedDay ? `${day.skippedDay.name} was skipped.` : "Nothing scheduled."}</p>
             )}
           </section>
 

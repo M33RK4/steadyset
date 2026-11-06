@@ -278,7 +278,7 @@ export function estimateMinutes(data: AppData, dayId: string): number {
 export function formatTarget(e: { sets: number; repsMin: number; repsMax: number; targetUnit: string; perSide: boolean }): string {
   const range = e.repsMin === e.repsMax ? `${e.repsMin}` : `${e.repsMin}–${e.repsMax}`;
   if (e.targetUnit === "minutes") return `${range} min`;
-  const unit = e.targetUnit === "seconds" ? " s" : " reps";
+  const unit = e.targetUnit === "seconds" ? " s" : range === "1" ? " rep" : " reps";
   return `${e.sets} × ${range}${unit}${e.perSide ? " / side" : ""}`;
 }
 

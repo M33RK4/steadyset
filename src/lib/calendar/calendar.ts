@@ -24,6 +24,8 @@ export interface CalendarDay {
   plannedSource: "plan" | "added" | "moved" | null;
   overrides: ScheduleOverride[];
   skippedDay: PlanDay | null;
+  /** Where this day's workout went, when it was moved rather than just skipped. */
+  movedTo: LocalDate | null;
   sessions: WorkoutSession[];
   status: DayStatus;
 }
@@ -97,7 +99,8 @@ export function buildDay(ctx: CalendarContext, date: LocalDate): CalendarDay {
     else if (isPast) status = ctx.showMissed ? "missed" : "unlogged";
     else status = "planned";
   } else if (skippedDay) status = "skipped";
-  return { date, isToday, isPast, planned, plannedSource: source, overrides, skippedDay, sessions, status };
+  const movedTo = skippedDay ? ctx.data.overrides.find((o) => o.kind === "add" && o.movedFrom === date)?.date ?? null : null;
+  return { date, isToday, isPast, planned, plannedSource: source, overrides, skippedDay, movedTo, sessions, status };
 }
 
 /** A day where the user was expected to train (not rest, not optional). */
@@ -131,7 +134,8 @@ export function weekSummary(ctx: CalendarContext, weekStartsOn: 0 | 1) {
   const required = days.filter(isRequired);
   const done = days.filter((d) => d.status === "completed" || d.status === "partial");
   const requiredDone = required.filter((d) => d.status === "completed" || d.status === "partial");
-  return { days, plannedCount: required.length, requiredDone: requiredDone.length, doneCount: done.length };
+  const sessionCount = days.flatMap((d) => d.sessions).filter((s) => s.status === "completed" || s.status === "partial").length;
+  return { days, plannedCount: required.length, requiredDone: requiredDone.length, doneCount: done.length, sessionCount };
 }
 
 export function upcomingWorkouts(ctx: CalendarContext, count: number, includeToday = false): CalendarDay[] {

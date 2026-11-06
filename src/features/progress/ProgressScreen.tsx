@@ -149,6 +149,9 @@ const METRICS: { id: string; label: string; unit: string }[] = [
   { id: "thigh", label: "Thigh", unit: "cm" },
 ];
 
+/** Beyond any real measurement: a slip of the finger, not a number to chart. */
+const LARGEST_VALUE: Record<string, number> = { kg: 500, lb: 1100, cm: 300, in: 120 };
+
 function metricUnit(id: string, units: "kg" | "lb") {
   const m = METRICS.find((x) => x.id === id);
   if (!m) return "";
@@ -165,14 +168,22 @@ function Measurements() {
   const [metric, setMetric] = useState(tracked[0] ?? "");
   const [value, setValue] = useState("");
   const [date, setDate] = useState(today);
+  const [problem, setProblem] = useState<string | null>(null);
   const current = tracked.includes(metric) ? metric : tracked[0] ?? "";
   const entries = data.measurements.filter((m) => m.metric === current).sort((a, b) => a.measuredOn.localeCompare(b.measuredOn));
+  // an entry saved without a date before that was prevented can be seen and deleted, but not charted
+  const dated = entries.filter((e) => e.measuredOn);
 
   const toggle = (id: string) => setPrefs({ trackedMetrics: tracked.includes(id) ? tracked.filter((x) => x !== id) : [...tracked, id] });
   const add = () => {
+    if (!current) return;
+    const unit = metricUnit(current, prefs.units);
     const v = Number(value.replace(",", "."));
-    if (!current || !Number.isFinite(v) || v <= 0) return;
-    const m: BodyMeasurement = { id: uuid(), metric: current, value: v, unit: metricUnit(current, prefs.units), measuredOn: date };
+    const largest = LARGEST_VALUE[unit] ?? 1000;
+    if (!Number.isFinite(v) || v <= 0 || v > largest) return setProblem(`Enter a number between 0 and ${largest} ${unit}.`);
+    if (!date || date > today) return setProblem("Pick today or an earlier date.");
+    setProblem(null);
+    const m: BodyMeasurement = { id: uuid(), metric: current, value: v, unit, measuredOn: date };
     commit([upsert("measurements", m)]);
     setValue("");
     toast("Measurement saved");
@@ -227,12 +238,17 @@ function Measurements() {
               Add entry
             </Button>
           </div>
-          {entries.length >= 2 && <LineChart points={entries.map((e) => ({ label: formatShortDate(e.measuredOn), value: e.value }))} label={`${METRICS.find((m) => m.id === current)?.label} over time`} unit={entries[0].unit} />}
+          {problem && (
+            <p role="alert" className="text-sm text-danger">
+              {problem}
+            </p>
+          )}
+          {dated.length >= 2 && <LineChart points={dated.map((e) => ({ label: formatShortDate(e.measuredOn), value: e.value }))} label={`${METRICS.find((m) => m.id === current)?.label} over time`} unit={entries[0].unit} />}
           {entries.length > 0 ? (
             <ul className="divide-y divide-line text-sm">
               {[...entries].reverse().map((e) => (
                 <li key={e.id} className="py-2 flex items-center gap-3">
-                  <span className="w-28 text-muted">{formatShortDate(e.measuredOn)}</span>
+                  <span className="w-28 text-muted">{e.measuredOn ? formatShortDate(e.measuredOn) : "No date"}</span>
                   <span className="num font-semibold flex-1">
                     {e.value} {e.unit}
                   </span>

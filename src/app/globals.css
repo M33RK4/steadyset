@@ -994,6 +994,21 @@
   scroll-behavior: auto !important;
 }
 
+/* The top bar's name: the buttons always fit, so it shrinks with the room that's left, and goes
+   altogether (the logo stays) where it would be too small to read. */
+.top-word {
+  font-size: clamp(1rem, calc((100vw - 272px) / 5.4), 1.5rem);
+}
+/* Lily's italic serif is much narrower for its size */
+[data-theme="lily"] .top-word {
+  font-size: clamp(1rem, calc((100vw - 272px) / 3.7), 1.5rem);
+}
+@media (max-width: 355px) {
+  .top-word {
+    display: none;
+  }
+}
+
 .brand {
   font-family: var(--display-font);
   font-weight: var(--display-weight);

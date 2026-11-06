@@ -1,6 +1,7 @@
 "use client";
 
-import { forwardRef, useId, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { cleanNumberText } from "@/lib/util/text";
 import { Icon, type IconName } from "./Icon";
 
 export function cx(...c: (string | false | null | undefined)[]) {
@@ -287,6 +288,45 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
   );
 }
 
+/**
+ * Typing in a number box. What's typed is kept as text until the box is left, so it can pass through
+ * things that aren't a final number yet: "42." on the way to 42.5, an empty box on the way to a new
+ * number, or "2" on the way to 20 when the smallest allowed is 10. A number that's valid already
+ * counts straight away, and the box tidies itself up on leaving.
+ */
+export function useNumberDraft({ value, onChange, min, max, allowEmpty, integer }: { value: number | null; onChange: (v: number | null) => void; min: number; max: number; allowEmpty?: boolean; integer: boolean }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const parsed = (text: string) => (text === "" || text === "." ? null : Number(text));
+  // changed from outside (the + and − buttons, say): what's on show gives way to it
+  useEffect(() => {
+    setDraft((d) => (d !== null && parsed(d) !== value ? null : d));
+  }, [value]);
+  return {
+    text: draft ?? (value === null ? "" : String(value)),
+    change(raw: string) {
+      const text = cleanNumberText(raw, integer);
+      const n = parsed(text);
+      if (n === null) {
+        setDraft(text);
+        if (allowEmpty && text === "") onChange(null);
+      } else if (n > max) {
+        setDraft(String(max));
+        onChange(max);
+      } else {
+        setDraft(text);
+        if (n >= min) onChange(n);
+      }
+    },
+    settle() {
+      if (draft === null) return;
+      const n = parsed(draft);
+      setDraft(null);
+      // emptied and left empty: the number it had comes back
+      if (n !== null) onChange(Math.min(max, Math.max(min, n)));
+    },
+  };
+}
+
 export function NumberStepper({
   value,
   onChange,
@@ -308,6 +348,8 @@ export function NumberStepper({
 }) {
   const id = useId();
   const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step));
+  const integer = Number.isInteger(step);
+  const typing = useNumberDraft({ value, onChange, min, max, allowEmpty, integer });
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="text-sm font-semibold text-muted block">
@@ -320,16 +362,12 @@ export function NumberStepper({
         <div className="flex-1 flex items-center justify-center min-w-0">
           <input
             id={id}
-            inputMode="decimal"
+            inputMode={integer ? "numeric" : "decimal"}
             className="w-full min-w-0 bg-transparent text-center text-lg font-semibold num outline-none"
-            value={value ?? ""}
+            value={typing.text}
             placeholder={allowEmpty ? "—" : undefined}
-            onChange={(e) => {
-              const raw = e.target.value.replace(",", ".");
-              if (raw === "" && allowEmpty) return onChange(null);
-              const n = Number(raw);
-              if (!Number.isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
-            }}
+            onChange={(e) => typing.change(e.target.value)}
+            onBlur={typing.settle}
           />
           {suffix && <span className="pr-2 text-muted text-sm">{suffix}</span>}
         </div>

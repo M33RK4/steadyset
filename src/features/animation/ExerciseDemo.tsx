@@ -194,7 +194,7 @@ function FullDemo({ animation, name }: { animation: string; name: string }) {
     <figure className="rounded-card bg-raised border border-line overflow-hidden">
       {mode === "loop" ? (
         <div className="relative">
-          <AnimatedFigure anim={anim} muscles={muscles} playing={playing} viewBox={viewBox} label={label} />
+          <AnimatedFigure anim={anim} muscles={muscles} playing={playing && animation !== "generic"} viewBox={viewBox} label={label} />
         </div>
       ) : (
         <div className="grid grid-flow-col auto-cols-fr items-center gap-1 p-2" role="group" aria-label={`${name}, step by step`}>
@@ -213,7 +213,7 @@ function FullDemo({ animation, name }: { animation: string; name: string }) {
       )}
       <figcaption className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2">
         <p className="flex-1 text-sm text-muted">{anim.cue}</p>
-        {mode === "loop" && (
+        {mode === "loop" && animation !== "generic" && (
           <button
             type="button"
             onClick={() => setPlaying((p) => !p)}

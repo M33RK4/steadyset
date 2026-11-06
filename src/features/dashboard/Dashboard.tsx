@@ -7,6 +7,7 @@ import { buildDay, currentStreak, nextRestDay, upcomingWorkouts, weekSummary, ty
 import { estimateMinutes, exercisesOfDay, formatTarget } from "@/lib/plans/planOps";
 import { deleteSession, inProgressSession, sessionProgress } from "@/lib/session/sessionOps";
 import { formatDuration, formatLongDate, WEEKDAY_SHORT, weekdayOf } from "@/lib/util/dates";
+import { plural } from "@/lib/util/text";
 import { Badge, Button, EmptyState, IconButton, ProgressRing, cx } from "@/components/ui/primitives";
 import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
@@ -97,7 +98,7 @@ export function Dashboard() {
                       <span className="num text-xl font-bold">{streak}</span> <span className="text-muted">day streak</span>
                     </span>
                   </p>
-                  <p className="text-sm text-muted">{week.doneCount ? `${week.doneCount} session${week.doneCount === 1 ? "" : "s"} logged this week.` : "Nothing logged yet this week."}</p>
+                  <p className="text-sm text-muted">{week.sessionCount ? `${plural(week.sessionCount, "session")} logged this week.` : "Nothing logged yet this week."}</p>
                 </>
               ) : (
                 <p className="text-sm text-muted">Your streak and weekly progress appear here once you finish your first workout.</p>
@@ -121,7 +122,7 @@ export function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{d.planned!.name}</p>
                     <p className="text-sm text-muted">
-                      {d.planned!.kind === "strength" ? `${exercisesOfDay(data, d.planned!.id).length} exercises · about ${estimateMinutes(data, d.planned!.id)} min` : d.planned!.kind === "cardio" ? "Light cardio & mobility" : "Optional"}
+                      {d.planned!.kind === "strength" ? `${plural(exercisesOfDay(data, d.planned!.id).length, "exercise")} · about ${estimateMinutes(data, d.planned!.id)} min` : d.planned!.kind === "cardio" ? "Light cardio & mobility" : "Optional"}
                       {d.plannedSource === "moved" && " · moved"}
                     </p>
                   </div>
@@ -160,7 +161,7 @@ export function Dashboard() {
                       <p className="font-semibold truncate">{s.title}</p>
                       <p className="text-sm text-muted">
                         {formatDuration(s.durationSeconds)}
-                        {p.sets ? ` · ${p.sets} sets` : ""}
+                        {p.sets ? ` · ${plural(p.sets, "set")}` : ""}
                       </p>
                     </div>
                     <Badge tone={s.status === "completed" ? "done" : "partial"}>{s.status === "completed" ? "Completed" : "Partial"}</Badge>
@@ -230,7 +231,7 @@ function TodayCard({
           {s.title}
         </h2>
         <p className="text-muted">
-          {p.completed} of {p.total} exercises done · {p.sets} sets logged
+          {p.completed} of {p.total} exercises done · {plural(p.sets, "set")} logged
         </p>
         <Link
           href="/workout"
@@ -256,7 +257,7 @@ function TodayCard({
           {doneSession ? "Nice work today" : planned ? "Rest day" : "Nothing scheduled today"}
         </h2>
         <p className="text-muted max-w-md">
-          {planned ? "Recovery is when your muscles adapt. A gentle walk or some stretching is plenty." : day.skippedDay ? "You moved or skipped today's workout." : "Enjoy the day, or start a workout anyway."}
+          {planned ? "Recovery is when your muscles adapt. A gentle walk or some stretching is plenty." : day.movedTo ? `You moved today's workout to ${formatLongDate(day.movedTo)}.` : day.skippedDay ? "You skipped today's workout." : "Enjoy the day, or start a workout anyway."}
         </p>
         <div className="relative flex flex-wrap gap-2 mt-2">
           <Button variant="secondary" icon="dumbbell" onClick={onLogWorkout}>
@@ -287,7 +288,7 @@ function TodayCard({
           {planned.name}
         </h2>
         <p className="text-muted mt-1">
-          {planned.kind === "strength" ? `${exs.length} exercises · about ${estimateMinutes(data, planned.id)} min` : planned.kind === "cardio" ? `Light day · about ${estimateMinutes(data, planned.id)} min` : "Optional — anything you enjoy"}
+          {planned.kind === "strength" ? `${plural(exs.length, "exercise")} · about ${estimateMinutes(data, planned.id)} min` : planned.kind === "cardio" ? `Light day · about ${estimateMinutes(data, planned.id)} min` : "Optional — anything you enjoy"}
         </p>
       </div>
       {exs.length > 0 && (
@@ -327,7 +328,7 @@ function WeekStrip({ days, today }: { days: CalendarDay[]; today: string }) {
   return (
     <ol className="grid grid-cols-7 gap-1.5" aria-label="This week">
       {days.map((d) => {
-        const label = d.planned ? d.planned.name : d.skippedDay ? "Skipped" : "No workout";
+        const label = d.planned ? d.planned.name : d.movedTo ? "Moved" : d.skippedDay ? "Skipped" : "No workout";
         return (
           <li key={d.date} className={cx("flex flex-col items-center gap-1.5 rounded-btn py-2.5", d.isToday && "bg-accent-soft ring-2 ring-accent")}>
             <span className={cx("text-xs font-semibold", d.isToday ? "text-accent-text" : "text-muted")}>{WEEKDAY_SHORT[weekdayOf(d.date)]}</span>
@@ -335,7 +336,7 @@ function WeekStrip({ days, today }: { days: CalendarDay[]; today: string }) {
             <StatusDot status={d.status} size={18} />
             <span className="sr-only">
               {d.date === today ? "Today, " : ""}
-              {label}: {d.status.replace("_", " ")}
+              {label}: {d.movedTo ? "moved" : d.status.replace("_", " ")}
             </span>
           </li>
         );

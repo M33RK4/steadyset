@@ -81,7 +81,7 @@ function applyDocumentPrefs(p: Preferences) {
   };
   // switching themes or light/dark: a soft cross-fade of the whole screen instead of a hard cut
   const still = p.reducedMotion === "reduce" || (p.reducedMotion !== "allow" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-  if (changed && !still && document.visibilityState === "visible" && document.startViewTransition) document.startViewTransition(apply);
+  if (changed && !still && document.visibilityState === "visible" && document.startViewTransition) void document.startViewTransition(apply).ready.catch(() => {});
   else apply();
 }
 

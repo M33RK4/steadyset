@@ -84,10 +84,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Top bar: full navigation on desktop, brand + quick actions on phones */}
       <header className="sticky top-0 z-40 px-3 md:px-6 pt-3">
-        <div className="dock mx-auto max-w-6xl rounded-card flex items-center gap-2 h-16 pl-3 pr-2 md:pl-4">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-auto lg:mr-4">
+        <div className="dock mx-auto max-w-6xl rounded-card flex items-center gap-1 min-[440px]:gap-2 h-16 pl-3 pr-2 md:pl-4">
+          <Link href="/" aria-label="Steadyset" className="flex items-center gap-2 shrink-0 mr-auto lg:mr-4">
             <BrandMark />
-            <span className="brand text-2xl leading-none">Steadyset</span>
+            <span className="brand top-word leading-none">Steadyset</span>
           </Link>
           <DesktopNav path={path} active={activeTab} />
           <SyncDot />
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             href="/library"
             aria-label="Exercises"
             aria-current={isActive(path, "/library") ? "page" : undefined}
-            className={cx("lg:hidden h-11 w-11 grid place-items-center rounded-btn", isActive(path, "/library") ? "bg-accent-soft text-accent-text" : "hover:bg-raised")}
+            className={cx("lg:hidden h-11 w-10 min-[440px]:w-11 shrink-0 grid place-items-center rounded-btn", isActive(path, "/library") ? "bg-accent-soft text-accent-text" : "hover:bg-raised")}
           >
             <Icon name="book" />
           </Link>
@@ -391,7 +391,7 @@ export function ModeToggle() {
       onClick={() => setPrefs({ colorMode: next })}
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
-      className="h-11 w-11 grid place-items-center rounded-btn hover:bg-raised shrink-0"
+      className="h-11 w-10 min-[440px]:w-11 grid place-items-center rounded-btn hover:bg-raised shrink-0"
     >
       <Icon name={shown === "dark" ? "sun" : "moon"} size={21} />
     </button>
@@ -417,14 +417,14 @@ export function ThemeQuickSwitch() {
   const shown = resolveMode(prefs.colorMode, systemDark);
   const current = THEMES.find((t) => t.id === prefs.theme) ?? THEMES[0];
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={`Theme: ${current.name}. Change theme`}
         onClick={() => setOpen((o) => !o)}
-        className="h-11 w-11 grid place-items-center rounded-btn hover:bg-raised"
+        className="h-11 w-10 min-[440px]:w-11 grid place-items-center rounded-btn hover:bg-raised"
       >
         <Icon name="palette" size={21} />
       </button>
@@ -485,7 +485,7 @@ function AccountButton({ active }: { active: boolean }) {
       href="/settings"
       aria-label="Settings and account"
       aria-current={active ? "page" : undefined}
-      className={cx("h-11 grid place-items-center rounded-btn shrink-0", mode === "user" ? "w-11" : "w-11", active ? "bg-accent text-accent-ink" : "hover:bg-raised")}
+      className={cx("h-11 w-10 min-[440px]:w-11 grid place-items-center rounded-btn shrink-0", active ? "bg-accent text-accent-ink" : "hover:bg-raised")}
     >
       {mode === "user" ? (
         <span className={cx("h-8 w-8 rounded-pill grid place-items-center font-bold text-sm", active ? "bg-accent-ink/20" : "bg-accent-soft text-accent-text")}>{initial}</span>

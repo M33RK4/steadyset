@@ -27,6 +27,7 @@ import { useNow } from "@/lib/timer/TimerWatcher";
 import { unlockAudio } from "@/lib/audio/alerts";
 import { convertWeight, lastTimeFor, roundWeight } from "@/lib/stats/stats";
 import { diffDays, formatClock, formatShortDate } from "@/lib/util/dates";
+import { plural } from "@/lib/util/text";
 import { activePlan, daysOfPlan, estimateMinutes, formatTarget } from "@/lib/plans/planOps";
 import type { AppData, SessionExercise, Units } from "@/lib/domain/types";
 import { Badge, Button, EmptyState, IconButton, NumberStepper, ProgressBar, ProgressRing, cx } from "@/components/ui/primitives";
@@ -162,7 +163,7 @@ function ActiveWorkout() {
             <span>
               {prog.completed}/{prog.total} exercises
             </span>
-            <span>{prog.sets} sets</span>
+            <span>{plural(prog.sets, "set")}</span>
           </p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => setSummaryOpen(true)}>
@@ -322,6 +323,10 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
 
   const doFinish = () => {
     if (!armed) return;
+    if (!reps) {
+      toast(isSeconds ? "Enter how many seconds you held first." : "Enter how many reps you did first.", { tone: "error" });
+      return;
+    }
     unlockAudio();
     const res = step((d, a) =>
       finishSet(d, a, {
@@ -358,7 +363,7 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
           <>
             <p className="text-muted">Target: {formatTarget({ ...se, sets: 1 })}. Do it at your own pace, then record how long you went.</p>
             <div className="max-w-xs">
-              <NumberStepper label="Minutes" value={minutes} onChange={setMinutes} min={1} max={240} />
+              <NumberStepper label="Minutes" value={minutes} onChange={setMinutes} min={1} max={240} allowEmpty />
             </div>
             <Button size="xl" block icon="check" disabled={!minutes} onClick={() => step((d, a) => completeTimedItem(d, a, se.id, minutes ?? 0, new Date()))}>
               Mark as done
@@ -389,7 +394,7 @@ function CurrentExercise({ se, onNext }: { se: SessionExercise; onNext: () => vo
         <>
           <LastTimeNote se={se} setNumber={setNumber} />
           <div className={cx("grid gap-3", se.usesWeight ? "grid-cols-2" : "grid-cols-1 max-w-xs")}>
-            <NumberStepper label={isSeconds ? "Seconds held" : se.perSide ? "Reps (per side)" : "Reps"} value={reps} onChange={setReps} min={0} max={isSeconds ? 600 : 100} />
+            <NumberStepper label={isSeconds ? "Seconds held" : se.perSide ? "Reps (per side)" : "Reps"} value={reps} onChange={setReps} min={0} max={isSeconds ? 600 : 100} allowEmpty />
             {se.usesWeight && (
               <NumberStepper label={`Weight (${prefs.units})`} value={weight} onChange={setWeight} min={0} max={999} step={prefs.units === "kg" ? 1.25 : 2.5} suffix={prefs.units} allowEmpty />
             )}
@@ -753,8 +758,8 @@ function SummaryDialog({ open, onClose, onSave, onDiscard }: { open: boolean; on
     >
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <Stat label="Minutes" value={minutes} />
-          <Stat label="Sets" value={prog.sets} />
+          <Stat label={minutes === 1 ? "Minute" : "Minutes"} value={minutes} />
+          <Stat label={prog.sets === 1 ? "Set" : "Sets"} value={prog.sets} />
           <Stat label="Exercises" value={`${prog.completed}/${prog.total}`} />
         </div>
         <ul className="divide-y divide-line">

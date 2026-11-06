@@ -55,7 +55,7 @@ export function BarChart({ data, label, unit = "", height = 180 }: { data: { lab
             <tr key={i}>
               <th scope="row">{d.label}</th>
               <td>
-                {d.value} {unit}
+                {d.value} {d.value === 1 ? unit.replace(/s$/, "") : unit}
               </td>
             </tr>
           ))}

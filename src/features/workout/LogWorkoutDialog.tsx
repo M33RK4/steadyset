@@ -7,7 +7,8 @@ import { Button, Field, IconButton } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { isTimed, logWorkout, sessionExercisesOf, setsOf } from "@/lib/session/sessionOps";
 import { isCycle, planSlotFor, saveSessionAsPlanDay } from "@/lib/plans/planOps";
-import type { LocalDate } from "@/lib/domain/types";
+import type { LocalDate, Units } from "@/lib/domain/types";
+import { convertWeight, roundWeight } from "@/lib/stats/stats";
 import { formatLongDate, WEEKDAY_NAMES, weekdayOf } from "@/lib/util/dates";
 import { useExercises, useToday } from "../common";
 import { ExercisePicker } from "../plans/ExercisePicker";
@@ -47,6 +48,8 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate, sessionId }
     if (editing) {
       // start from what was recorded
       const fmt = (n: number | null) => (n === null ? "" : String(n));
+      // shown in the units in use now, which aren't always the ones it was logged in
+      const inCurrentUnits = (x: { weight: number | null; weightUnit: Units | null }) => (x.weight !== null && x.weightUnit && x.weightUnit !== prefs.units ? roundWeight(convertWeight(x.weight, x.weightUnit, prefs.units)) : x.weight);
       setDate(editing.localDate);
       setTitle(editing.title);
       setMinutes(String(Math.max(1, Math.round((editing.durationSeconds ?? 2700) / 60))));
@@ -59,7 +62,7 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate, sessionId }
             key: i + 1,
             exerciseId: e.exerciseId!,
             minutes: isTimed(e) ? fmt(e.durationSeconds ? Math.round(e.durationSeconds / 60) : null) : "",
-            sets: sets.length ? sets.map((x) => ({ reps: fmt(e.targetUnit === "seconds" ? x.durationSeconds : x.reps), weight: fmt(x.weight) })) : [{ reps: "", weight: "" }],
+            sets: sets.length ? sets.map((x) => ({ reps: fmt(e.targetUnit === "seconds" ? x.durationSeconds : x.reps), weight: fmt(inCurrentUnits(x)) })) : [{ reps: "", weight: "" }],
           };
         });
       setRows(loaded);
@@ -94,7 +97,8 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate, sessionId }
       units: prefs.units,
       now: new Date(),
       sessionId: editing?.id,
-      items: filled.map((row) => ({
+      // an edit keeps exercises with nothing filled in, as not done yet; only a new log leaves them out
+      items: (editing ? rows : filled).map((row) => ({
         exerciseId: row.exerciseId,
         minutes: num(row.minutes),
         sets: row.sets.map((s) => ({ reps: num(s.reps), weight: num(s.weight) })),
@@ -150,10 +154,10 @@ export function LogWorkoutDialog({ open, onClose, date: initialDate, sessionId }
             <Field label="Name">
               {(id) => <input id={id} className="field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Legs, Upper body" />}
             </Field>
-            <Field label="Date" error={date > today ? "Pick today or an earlier day." : null}>
+            <Field label="Date" error={!date ? "Pick a date." : date > today ? "Pick today or an earlier day." : null}>
               {(id) => <input id={id} type="date" className="field" max={today} value={date} onChange={(e) => setDate(e.target.value)} />}
             </Field>
-            <Field label="Minutes" error={minutes && !validMinutes ? "1–600" : null}>
+            <Field label="Minutes" error={!validMinutes ? "Enter 1–600" : null}>
               {(id) => <input id={id} className="field num" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(digits(e.target.value))} />}
             </Field>
           </div>

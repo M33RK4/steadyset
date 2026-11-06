@@ -354,7 +354,14 @@ export function logWorkout(
     : [];
   const items = args.items.filter((it) => lookup(it.exerciseId));
   const allTimed = items.length > 0 && items.every((it) => isTimedKind(lookup(it.exerciseId)!.kind));
-  const done = (it: LoggedExercise) => (isTimedKind(lookup(it.exerciseId)!.kind) ? !!it.minutes : it.sets.some((x) => x.reps !== null && x.reps > 0));
+  // an edit of an unfinished workout keeps what each exercise was aiming for, so it only counts as
+  // complete once that's really been done
+  const earlier = prev?.status === "partial" ? [...sessionExercisesOf(data, prev.id)] : [];
+  const aims = items.map((it) => {
+    const i = earlier.findIndex((e) => e.exerciseId === it.exerciseId);
+    return i < 0 ? undefined : earlier.splice(i, 1)[0];
+  });
+  const done = (it: LoggedExercise, i: number) => (isTimedKind(lookup(it.exerciseId)!.kind) ? !!it.minutes : it.sets.filter((x) => x.reps !== null && x.reps > 0).length >= (aims[i]?.targetSets ?? 1));
   changes.push(
     upsert("sessions", {
       id: sessionId,
@@ -378,20 +385,21 @@ export function logWorkout(
     const hold = ex.kind === "time";
     const sets = timed ? [] : it.sets.filter((s) => s.reps !== null && s.reps > 0);
     const reps = sets.map((s) => s.reps!);
+    const aim = aims[position];
     const se: SessionExercise = {
       id: uuid(),
       sessionId,
       exerciseId: ex.id,
       position,
       name: ex.name,
-      targetSets: timed ? 1 : Math.max(1, sets.length),
-      repsMin: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : reps.length ? Math.min(...reps) : 10,
-      repsMax: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : reps.length ? Math.max(...reps) : 12,
+      targetSets: timed ? 1 : Math.max(aim?.targetSets ?? 1, sets.length),
+      repsMin: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : aim?.repsMin ?? (reps.length ? Math.min(...reps) : 10),
+      repsMax: timed ? Math.max(1, Math.round(it.minutes ?? 0)) : aim?.repsMax ?? (reps.length ? Math.max(...reps) : 12),
       targetUnit: timed ? "minutes" : hold ? "seconds" : "reps",
       perSide: false,
       restSeconds: 0,
       usesWeight: ex.usesWeight,
-      status: timed ? (it.minutes ? "completed" : "pending") : sets.length ? "completed" : "pending",
+      status: timed ? (it.minutes ? "completed" : "pending") : sets.length === 0 ? "pending" : sets.length >= (aim?.targetSets ?? 1) ? "completed" : "active",
       startedAt,
       completedAt: endedAt,
       durationSeconds: timed && it.minutes ? Math.round(it.minutes * 60) : null,
