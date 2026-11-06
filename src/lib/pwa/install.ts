@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { nativeApp } from "./native";
 
 // Installing Steadyset as an app: registers the service worker and works out what "Install app"
 // should do on this device. Android gets the APK (served from public/); iPhones can't run one, so
@@ -28,7 +29,7 @@ function start() {
 /** Running as the installed app (the APK, or opened from a home-screen icon). */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true || document.referrer.startsWith("android-app://");
+  return !!nativeApp() || window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true || document.referrer.startsWith("android-app://");
 }
 
 function isIOS(): boolean {

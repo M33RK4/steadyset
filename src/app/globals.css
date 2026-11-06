@@ -287,6 +287,10 @@
     svg {
       -webkit-user-drag: none;
     }
+    /* typing: the keyboard takes the space, and the dock would only ride along on top of it */
+    body:has(input:focus, textarea:focus) nav[aria-label="Main"] {
+      display: none;
+    }
   }
   body {
     background: var(--bg);

@@ -506,14 +506,14 @@ function GuestBanner({ configured }: { configured: boolean }) {
         <p className="flex-1">
           {configured ? (
             <>
-              You're using Steadyset as a guest — everything is saved in this browser only.{" "}
+              You're using Steadyset as a guest — everything is saved on this device only.{" "}
               <Link href="/auth/signup" className="font-bold underline underline-offset-2">
                 Create a free account
               </Link>{" "}
               to sync across devices and train with buddies.
             </>
           ) : (
-            <>Accounts aren't configured on this deployment, so your data is saved in this browser only. See the README to connect Supabase.</>
+            <>Accounts aren't configured on this deployment, so your data is saved on this device only. See the README to connect Supabase.</>
           )}
         </p>
         <button type="button" onClick={() => setHidden(true)} aria-label="Dismiss" className="h-8 w-8 -m-1 grid place-items-center rounded-btn hover:bg-line shrink-0">
@@ -566,7 +566,7 @@ function GuestImportDialog() {
       }
     >
       <p className="text-muted">
-        This browser has workouts, plans or settings you created before signing in. Importing copies them into your account so they sync everywhere. Nothing in your account is overwritten, and if you choose
+        This device has workouts, plans or settings you created before signing in. Importing copies them into your account so they sync everywhere. Nothing in your account is overwritten, and if you choose
         “Not now” the guest data stays on this device.
       </p>
     </Dialog>

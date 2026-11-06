@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/Icon";
 import { LilyFlower, Ridge } from "@/components/ui/ThemeArt";
 import type { ThemeId } from "@/lib/domain/types";
 import { APK_URL, useInstallState } from "@/lib/pwa/install";
+import { nativeApp } from "@/lib/pwa/native";
 
 function Section({ id, title, children, description }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
@@ -47,10 +48,16 @@ export function SettingsScreen() {
       ...data,
       builtInExercises: BUILT_IN_EXERCISES.map((e) => ({ id: e.id, slug: e.slug, name: e.name })),
     };
+    const name = `steadyset-export-${new Date().toISOString().slice(0, 10)}.json`;
+    const native = nativeApp();
+    if (native) {
+      native.saveFile(name, "application/json", JSON.stringify(payload, null, 2)); // it confirms by itself
+      return;
+    }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `steadyset-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     toast("Export downloaded", { tone: "success" });
@@ -158,19 +165,19 @@ export function SettingsScreen() {
                 onClick={() => {
                   unlockAudio();
                   const ok = playChime();
-                  if (!ok) toast("Your browser blocked audio — tap again or check its sound settings.", { tone: "error" });
+                  if (!ok) toast("Sound was blocked — tap again or check your sound settings.", { tone: "error" });
                 }}
               >
                 Test sound
               </Button>
             </div>
             <Switch
-              label="Browser notifications"
+              label="Notifications"
               description={
                 perm === "unsupported"
-                  ? "This browser doesn't support notifications."
+                  ? "Notifications aren't supported here."
                   : perm === "denied"
-                    ? "Notifications are blocked for this site. Allow them in your browser's site settings, then turn this on."
+                    ? "Notifications are blocked. Allow them for Steadyset in your settings, then turn this on."
                     : "Notify you when rest ends while Steadyset is in the background."
               }
               disabled={perm === "unsupported"}
@@ -183,7 +190,7 @@ export function SettingsScreen() {
                 else toast("Notifications weren't allowed.", { tone: "error" });
               }}
             />
-            <Switch label="Workout reminders" description="A reminder on scheduled training days that aren't done yet (while Steadyset is open in a tab)." checked={prefs.remindersEnabled} onChange={(v) => setPrefs({ remindersEnabled: v })} />
+            <Switch label="Workout reminders" description="A reminder on scheduled training days that aren't done yet (while Steadyset is open)." checked={prefs.remindersEnabled} onChange={(v) => setPrefs({ remindersEnabled: v })} />
             {prefs.remindersEnabled && (
               <label className="py-3 flex items-center justify-between gap-3">
                 <span className="font-medium">Remind me at</span>
@@ -267,7 +274,7 @@ export function SettingsScreen() {
           <div className="space-y-3">
             <p className="text-muted">
               {configured
-                ? "You're using guest mode: data stays in this browser. Create an account to sync your plans, history, calendar and settings across devices. Your guest data can be imported when you sign in."
+                ? "You're using guest mode: data stays on this device. Create an account to sync your plans, history, calendar and settings across devices. Your guest data can be imported when you sign in."
                 : "Accounts aren't configured on this deployment. Add your Supabase settings (see README) to enable sign-in and sync."}
             </p>
             {configured && (
@@ -294,7 +301,7 @@ export function SettingsScreen() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <p className="text-sm text-muted flex-1 min-w-[200px]">
-              {mode === "user" ? "Permanently delete your account and all of its data from the server and this device." : "Delete all guest data stored in this browser."}
+              {mode === "user" ? "Permanently delete your account and all of its data from the server and this device." : "Delete all guest data stored on this device."}
             </p>
             <Button variant="danger" icon="trash" onClick={() => setDeleteOpen(true)}>
               {mode === "user" ? "Delete account" : "Delete guest data"}
@@ -360,7 +367,7 @@ function DeleteDialog({ open, onClose }: { open: boolean; onClose: () => void })
         <p className="text-muted">
           {isUser
             ? "This removes your login, plans, workout history, measurements and settings from our database. It can't be undone. Consider exporting your data first."
-            : "This removes all plans, workouts and settings saved in this browser. It can't be undone."}
+            : "This removes all plans, workouts and settings saved on this device. It can't be undone."}
         </p>
         <Field label='Type "DELETE" to confirm' error={error}>
           {(id) => <input id={id} className="field" value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" />}

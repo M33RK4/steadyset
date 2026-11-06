@@ -1,5 +1,8 @@
 // The loading screen (components/shell/Splash.tsx) and the colour of the phone's system bars,
 // which take the loading screen's colour while it's up and the theme's background after that.
+// The Android app draws its own loading screen and bars, so here it only gets told about them.
+
+import { nativeApp } from "./native";
 
 export const SPLASH_COLOR = "#14243a";
 
@@ -12,17 +15,24 @@ function splashShowing(): boolean {
   return !!el && !el.hidden;
 }
 
-/** The phone's status bar (and the installed app's title bar) takes the theme's background. */
+/** The phone's status bar and buttons (or the installed app's title bar) take the theme's background. */
 export function syncSystemBars() {
   if (typeof document === "undefined" || splashShowing()) return;
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
-  if (bg) document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", bg));
+  if (!bg) return;
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", bg));
+  nativeApp()?.setBars(bg);
 }
 
 let leaving = false;
 
 /** The app is ready: the loading screen opens up to show it. */
 export function dismissSplash() {
+  const native = nativeApp();
+  if (native) {
+    native.ready();
+    return;
+  }
   const el = document.getElementById("splash");
   if (!el || el.hidden || leaving) return;
   leaving = true;

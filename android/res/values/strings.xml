@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Steadyset</string>
+    <string name="notification_channel">Workout alerts</string>
+    <string name="offline_message">Can\'t reach Steadyset. Check your connection and try again.</string>
+    <string name="offline_retry">Try again</string>
+    <string name="file_saved">Saved</string>
+    <string name="file_not_saved">Couldn\'t save that file</string>
+    <string name="shortcut_workout">Start today\'s workout</string>
+    <string name="shortcut_workout_short">Workout</string>
+    <string name="shortcut_buddies">Buddies</string>
+</resources>

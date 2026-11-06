@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "../store/AppStore";
 import { isStale, markAlerted, tick } from "./restTimer";
 import { playChime, showNotification, vibrate } from "../audio/alerts";
+import { nativeApp } from "../pwa/native";
 
 /** Re-render periodically while `running` (display only — correctness comes from timestamps). */
 export function useNow(running: boolean, intervalMs = 250): number {
@@ -46,9 +47,12 @@ export function TimerWatcher() {
         const stale = isStale(state, now);
         if (!stale) {
           const p = prefsRef.current;
-          if (p.soundEnabled) playChime();
-          vibrate();
-          if (document.visibilityState === "hidden" && p.notificationsEnabled) {
+          // out of sight in the Android app, its notification makes the sound and the vibration
+          const hidden = document.visibilityState === "hidden";
+          const nativeAlert = hidden && p.notificationsEnabled && !!nativeApp();
+          if (p.soundEnabled && !nativeAlert) playChime();
+          if (!nativeAlert) vibrate();
+          if (hidden && p.notificationsEnabled) {
             showNotification("Rest finished", "Time for your next set!", `rest-${state.runId}`);
           }
         }
@@ -70,6 +74,15 @@ export function TimerWatcher() {
       window.removeEventListener("focus", check);
     };
   }, [timer?.runId, timer?.status, timer?.endsAt, timer?.alerted, setActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // In the Android app the alert is also left with the phone, so it rings on time even if Android
+  // has closed the app while you rest.
+  useEffect(() => {
+    const native = nativeApp();
+    if (!native) return;
+    if (timer?.status === "running" && timer.endsAt && prefs.notificationsEnabled) native.scheduleAlert(timer.endsAt, "Rest finished", "Time for your next set!", `rest-${timer.runId}`);
+    else native.cancelAlert();
+  }, [timer?.status, timer?.endsAt, timer?.runId, prefs.notificationsEnabled]);
 
   return null;
 }

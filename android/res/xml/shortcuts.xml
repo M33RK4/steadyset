@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="workout"
+        android:shortcutLongLabel="@string/shortcut_workout"
+        android:shortcutShortLabel="@string/shortcut_workout_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://steadyset.vercel.app/workout"
+            android:targetClass="app.vercel.steadyset.twa.LauncherActivity"
+            android:targetPackage="app.vercel.steadyset.twa" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="buddies"
+        android:shortcutLongLabel="@string/shortcut_buddies"
+        android:shortcutShortLabel="@string/shortcut_buddies">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://steadyset.vercel.app/buddies"
+            android:targetClass="app.vercel.steadyset.twa.LauncherActivity"
+            android:targetPackage="app.vercel.steadyset.twa" />
+    </shortcut>
+</shortcuts>

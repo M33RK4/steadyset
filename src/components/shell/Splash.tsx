@@ -1,7 +1,7 @@
 import { SPLASH_COLOR } from "@/lib/pwa/splash";
 
 // Shown once per session, from the page's very first paint, before any of the app's code has run.
-const splashScript = `(function(){try{var s=document.getElementById('splash');if(sessionStorage.getItem('steadyset:splashed')){s.hidden=true;return}sessionStorage.setItem('steadyset:splashed','1');document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content','${SPLASH_COLOR}')})}catch(e){}})();`;
+const splashScript = `(function(){try{var s=document.getElementById('splash');if(window.SteadysetApp){s.hidden=true;return}if(sessionStorage.getItem('steadyset:splashed')){s.hidden=true;return}sessionStorage.setItem('steadyset:splashed','1');document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content','${SPLASH_COLOR}')})}catch(e){}})();`;
 
 const VIEW = "0 0 512 512";
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash">#14243A</color>
+    <!-- A light theme here and a dark one in values-night: the page's "Match device" setting reads
+         which one is in use, through prefers-color-scheme. -->
+    <style name="Base" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash</item>
+        <item name="android:statusBarColor">@color/splash</item>
+        <item name="android:navigationBarColor">@color/splash</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <style name="AppTheme" parent="Base" />
+</resources>

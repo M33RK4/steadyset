@@ -9,6 +9,7 @@ import { useConfirm, useToast } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/Icon";
 import { liveOf, useBuddies } from "./BuddiesProvider";
 import { BuddyLiveCard } from "./BuddyLive";
+import { nativeApp } from "@/lib/pwa/native";
 
 export function BuddiesScreen() {
   const { mode, configured, prefs } = useApp();
@@ -171,7 +172,9 @@ function ConnectPanel() {
                   onClick={async () => {
                     const text = `Let's train together on Steadyset! My buddy code is ${code} — enter it under Buddies.`;
                     try {
-                      if (navigator.share) await navigator.share({ text });
+                      const native = nativeApp();
+                      if (native) native.share(text);
+                      else if (navigator.share) await navigator.share({ text });
                       else {
                         await navigator.clipboard.writeText(text);
                         toast("Invite copied — paste it in a message", { tone: "success" });

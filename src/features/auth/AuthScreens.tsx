@@ -48,7 +48,7 @@ function Notice({ tone, children }: { tone: "error" | "success" | "info"; childr
 function NotConfigured() {
   return (
     <Notice tone="info">
-      Accounts aren't set up on this deployment yet (missing Supabase settings). You can still use Steadyset as a guest — your data stays in this browser. <Link href="/" className="underline font-semibold">Continue as guest</Link>
+      Accounts aren't set up on this deployment yet (missing Supabase settings). You can still use Steadyset as a guest — your data stays on this device. <Link href="/" className="underline font-semibold">Continue as guest</Link>
     </Notice>
   );
 }

@@ -1,6 +1,8 @@
 // Rest-timer alerts: a short synthesized chime (Web Audio, no asset to load or license),
 // optional vibration, and an optional system notification when the tab is in the background.
 
+import { nativeApp } from "../pwa/native";
+
 type AudioCtor = typeof AudioContext;
 let ctx: AudioContext | null = null;
 
@@ -82,11 +84,20 @@ export function vibrate(pattern: number | number[] = [180, 80, 180]) {
 }
 
 export function notificationPermission(): NotificationPermission | "unsupported" {
+  const native = nativeApp();
+  if (native) return native.notificationPermission();
   if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
   return Notification.permission;
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermission | "unsupported"> {
+  const native = nativeApp();
+  if (native) {
+    return new Promise((resolve) => {
+      window.__steadysetPermission = resolve;
+      native.requestNotifications();
+    });
+  }
   if (notificationPermission() === "unsupported") return "unsupported";
   try {
     return await Notification.requestPermission();
@@ -98,6 +109,11 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 /** Show a system notification (used only when the page is hidden). Tag dedupes repeats. */
 export function showNotification(title: string, body: string, tag: string) {
   if (notificationPermission() !== "granted") return false;
+  const native = nativeApp();
+  if (native) {
+    native.postNotification(title, body, tag);
+    return true;
+  }
   try {
     const n = new Notification(title, { body, tag, silent: false });
     n.onclick = () => {
