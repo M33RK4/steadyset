@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/Icon";
 import { LilyFlower, Ridge } from "@/components/ui/ThemeArt";
 import type { ThemeId } from "@/lib/domain/types";
 import { promptInstall, useInstallState } from "@/lib/pwa/install";
+import { ApkLink } from "@/components/ui/ApkLink";
 
 function Section({ id, title, children, description }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
@@ -402,20 +403,28 @@ function InstallSection() {
           <Icon name="check" size={20} /> Steadyset is installed on this device.
         </p>
       ) : state === "available" ? (
-        <Button
-          icon="download"
-          onClick={async () => {
-            if (await promptInstall()) toast("Steadyset is on your home screen", { tone: "success" });
-          }}
-        >
-          Install app
-        </Button>
+        <div className="space-y-3">
+          <Button
+            icon="download"
+            onClick={async () => {
+              if (await promptInstall()) toast("Steadyset is on your home screen", { tone: "success" });
+            }}
+          >
+            Install app
+          </Button>
+          <p className="text-sm">
+            <ApkLink />
+          </p>
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
           <div className="tile p-4 space-y-1">
             <p className="font-bold">Android</p>
             <p className="text-muted">
               Open this page in Chrome, tap the <span className="font-bold text-ink">⋮</span> menu, then <span className="font-bold text-ink">Install app</span> (or <span className="font-bold text-ink">Add to Home screen</span>).
+            </p>
+            <p className="pt-1">
+              <ApkLink />
             </p>
           </div>
           <div className="tile p-4 space-y-1">

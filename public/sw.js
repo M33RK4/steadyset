@@ -35,6 +35,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith(".apk")) return; // the Android app download: never cached
 
   if (req.mode === "navigate") {
     event.respondWith(

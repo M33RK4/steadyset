@@ -8,6 +8,7 @@ import { passwordProblems, requestPasswordReset, resendVerification, signIn, sig
 import { getSupabase } from "@/lib/supabase/client";
 import { Button, Field, Spinner } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
+import { ApkLink } from "@/components/ui/ApkLink";
 import { BrandMark } from "@/components/ui/ThemeArt";
 
 function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
@@ -26,6 +27,9 @@ function AuthCard({ title, subtitle, children, footer }: { title: string; subtit
           {children}
         </main>
         {footer && <div className="text-center text-sm text-muted">{footer}</div>}
+        <div className="text-center text-sm">
+          <ApkLink />
+        </div>
       </div>
     </div>
   );
