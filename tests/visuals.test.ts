@@ -4,6 +4,8 @@ import { BUILT_IN_EXERCISES } from "../src/lib/data/exercises";
 import { muscleTargets, musclesFor } from "../src/lib/data/muscles";
 import { ANIMATIONS, animationFor } from "../src/features/animation/library";
 import { angleOf, jointProbe, joints, withBody, wrap, type Joints, type Pose, type Pt } from "../src/features/animation/figure";
+import { inlineCssVars } from "../src/features/animation/thumbs";
+import { shapesToSvg } from "../src/features/animation/render";
 
 test("muscle names map onto the right areas of the muscle map", () => {
   assert.deepEqual(musclesFor(["Glutes (side)"]), ["abductors"]);
@@ -40,6 +42,17 @@ test("the new exercises are in the library", () => {
   // every version an exercise points to exists
   for (const e of BUILT_IN_EXERCISES) for (const v of e.variants ?? []) assert.ok(slugs.has(v), `${e.slug} → ${v}`);
   assert.equal(new Set(BUILT_IN_EXERCISES.map((e) => e.id)).size, BUILT_IN_EXERCISES.length, "ids are unique");
+});
+
+test("every exercise picture still has valid markup once the theme's values are written in", () => {
+  // a font list really does contain double quotes: next/font names its fallback in them
+  const valueOf = (name: string) => (name === "--body-font" ? '"__Manrope_abc", "Manrope Fallback", sans-serif' : "#123456");
+  const tag = /^<\/?[a-zA-Z]+(\s+[\w:-]+="[^"<>]*")*\s*\/?>$/;
+  for (const [key, anim] of Object.entries(ANIMATIONS)) {
+    const markup = inlineCssVars(shapesToSvg(anim.at(anim.frames[anim.frames.length > 1 ? 1 : 0].t, []), "t"), valueOf);
+    assert.ok(!markup.includes("var(--"), key);
+    for (const t of markup.match(/<[^>]*>/g) ?? []) assert.match(t, tag, key);
+  }
 });
 
 test("animations produce valid geometry through the whole movement", () => {

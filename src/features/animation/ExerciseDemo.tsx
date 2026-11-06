@@ -106,6 +106,7 @@ function Thumb({ animation, body, label, ratio }: { animation: string; body: "ma
     const src = palette ? thumbUrl(palette, body, animation) : undefined;
     return src ? { src, fresh: false } : null;
   });
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!palette || !box.current) return;
     const src = thumbUrl(palette, body, animation);
@@ -124,9 +125,16 @@ function Thumb({ animation, body, label, ratio }: { animation: string; body: "ma
   }, [palette, body, animation]);
   return (
     <div ref={box} style={{ aspectRatio: ratio }}>
-      {image && <img src={image.src} alt={label} decoding="async" draggable={false} className={cx("block w-full h-full", image.fresh && "anim-thumb")} />}
+      {/* an image that won't load is drawn live instead: never a broken-image icon */}
+      {failed ? <LiveStill animation={animation} body={body} label={label} /> : image && <img src={image.src} alt={label} decoding="async" draggable={false} onError={() => setFailed(true)} className={cx("block w-full h-full", image.fresh && "anim-thumb")} />}
     </div>
   );
+}
+
+function LiveStill({ animation, body, label }: { animation: string; body: "male" | "female"; label: string }) {
+  const anim = useBodyAnimation(animation, body);
+  const shapes = useMemo(() => anim.at(anim.frames[anim.frames.length > 1 ? 1 : 0].t, musclesOf(animation)), [anim, animation]);
+  return <ExerciseFigure shapes={shapes} viewBox={anim.viewBox ?? "0 0 200 150"} label={label} />;
 }
 
 /** Thumbnails show the key position and only animate under a mouse, to keep long lists light. */

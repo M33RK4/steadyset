@@ -46,17 +46,25 @@ type Job = { key: string; palette: string; body: Body; animation: string; waitin
 const queue = new Map<string, Job>();
 let running = false;
 
-/** An image with the theme's colours written in: unlike the page, an image can't read them. */
+/**
+ * Writes the theme's values into a picture's markup: unlike the page, an image can't read them.
+ * They land inside attributes, so a value's own double quotes (font names have them) become single
+ * ones: left as they are, they would end the attribute and the image wouldn't load at all.
+ */
+export function inlineCssVars(markup: string, valueOf: (name: string) => string): string {
+  const known = new Map<string, string>();
+  return markup.replace(/var\((--[\w-]+)\)/g, (_, name: string) => {
+    if (!known.has(name)) known.set(name, valueOf(name).trim().replace(/"/g, "'"));
+    return known.get(name)!;
+  });
+}
+
 function buildSvg(job: Job): string {
   const a = animationFor(job.animation);
   const t = a.frames[a.frames.length > 1 ? 1 : 0].t;
   const shapes = withBody(job.body, () => a.at(t, musclesOf(job.animation)));
   const css = getComputedStyle(document.documentElement);
-  const known = new Map<string, string>();
-  const inner = shapesToSvg(shapes, "t").replace(/var\((--[\w-]+)\)/g, (_, name: string) => {
-    if (!known.has(name)) known.set(name, css.getPropertyValue(name).trim());
-    return known.get(name)!;
-  });
+  const inner = inlineCssVars(shapesToSvg(shapes, "t"), (name) => css.getPropertyValue(name));
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${a.viewBox ?? "0 0 200 150"}">${inner}</svg>`;
 }
 
