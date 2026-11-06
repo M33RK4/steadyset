@@ -65,7 +65,9 @@ export function DayOverview({
     <ol className="card divide-y divide-line overflow-hidden" aria-label="All days at a glance">
       {slots.map((s, i) => {
         const d = s.day;
-        const dragging = drag?.id === d?.id;
+        // an empty day has no id to match: without a day or a drag, nothing here is being dragged
+        const offset = drag && d && drag.id === d.id ? drag.dy : null;
+        const dragging = offset !== null;
         const target = drag && drag.over === i && drag.from !== i;
         const count = d?.exercises.length ?? 0;
         return (
@@ -75,7 +77,7 @@ export function DayOverview({
               rows.current[i] = el;
             }}
             className={cx("relative flex items-center gap-1 pl-3 pr-1.5 py-2 bg-surface transition-colors", target && "bg-accent-soft", dragging && "z-10 shadow-lg ring-2 ring-accent rounded-ctl")}
-            style={dragging ? { transform: `translateY(${drag!.dy}px)` } : undefined}
+            style={dragging ? { transform: `translateY(${offset}px)` } : undefined}
           >
             <span className="w-9 shrink-0 text-sm font-semibold text-muted">{s.label}</span>
             {d ? (
