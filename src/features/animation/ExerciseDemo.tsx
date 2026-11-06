@@ -169,11 +169,11 @@ function prefersReducedMotion(): boolean {
  * Looping, original illustrated demonstration of an exercise. Users with reduced motion get the
  * frame-by-frame view (start → finish with a direction cue) and can still press play.
  */
-export function ExerciseDemo({ animation, name, compact }: { animation: string; name: string; compact?: boolean }) {
-  return compact ? <CompactDemo animation={animation} name={name} /> : <FullDemo animation={animation} name={name} />;
+export function ExerciseDemo({ animation, name, compact, bare }: { animation: string; name: string; compact?: boolean; /** just the moving picture: no description or controls */ bare?: boolean }) {
+  return compact ? <CompactDemo animation={animation} name={name} /> : <FullDemo animation={animation} name={name} bare={bare} />;
 }
 
-function FullDemo({ animation, name }: { animation: string; name: string }) {
+function FullDemo({ animation, name, bare }: { animation: string; name: string; bare?: boolean }) {
   const { prefs } = useApp();
   const anim = useBodyAnimation(animation, prefs.bodyType ?? "female");
   const muscles = musclesOf(animation);
@@ -211,7 +211,7 @@ function FullDemo({ animation, name }: { animation: string; name: string }) {
           ))}
         </div>
       )}
-      <figcaption className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2">
+      {!bare && <figcaption className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2">
         <p className="flex-1 text-sm text-muted">{anim.cue}</p>
         {mode === "loop" && animation !== "generic" && (
           <button
@@ -236,7 +236,7 @@ function FullDemo({ animation, name }: { animation: string; name: string }) {
             <Icon name="frames" size={16} /> Steps
           </button>
         )}
-      </figcaption>
+      </figcaption>}
     </figure>
   );
 }

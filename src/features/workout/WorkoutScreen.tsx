@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/lib/store/AppStore";
 import {
   addExerciseToSession,
@@ -40,7 +40,7 @@ import { ExercisePicker } from "../plans/ExercisePicker";
 import { uuid } from "@/lib/util/ids";
 import { BuddyStrip } from "../buddies/BuddyLive";
 import { CardFlower } from "@/components/ui/ThemeArt";
-import { exerciseDescription, useExerciseSheet } from "../library/ExerciseSheet";
+import { useExerciseSheet } from "../library/ExerciseSheet";
 
 export function WorkoutScreen() {
   const { active, data, setActive } = useApp();
@@ -469,13 +469,18 @@ function LastTimeNote({ se, setNumber }: { se: SessionExercise; setNumber: numbe
   );
 }
 
+/**
+ * Only what's needed mid-workout: the name, the target and the movement. The description and the
+ * full guide are a tap away in "How to do it". Once an exercise is done the animation goes too, so
+ * the way on to the next one is right there.
+ */
 function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: string }) {
   const info = useExercises().get(se.exerciseId);
   const openSheet = useExerciseSheet();
-  const about = info ? exerciseDescription(info) : "";
+  const done = se.status === "completed";
   return (
-    <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4 items-start">
-      <div className="min-w-0 space-y-1 order-2 sm:order-1">
+    <div className={cx("grid gap-4 items-start", !done && "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]")}>
+      <div className="min-w-0 space-y-1">
         <Badge tone={se.status === "completed" ? "done" : "accent"}>{se.status === "completed" ? "Completed" : "Current exercise"}</Badge>
         <h2 id="cur-h" className="text-2xl md:text-3xl leading-tight">
           {se.name}
@@ -484,16 +489,17 @@ function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: str
           Target {formatTarget({ ...se, sets: se.targetSets })}
           {se.restSeconds > 0 && !isTimed(se) ? ` · ${se.restSeconds}s rest` : ""}
         </p>
-        {about && <p className="pt-2 leading-relaxed">{about}</p>}
-        {info && (
+        {info && !done && (
           <button type="button" onClick={() => openSheet(info.id)} className="mt-2 inline-flex items-center gap-1.5 font-bold text-accent-text hover:underline">
             <Icon name="info" size={18} /> How to do it
           </button>
         )}
       </div>
-      <div className="order-1 sm:order-2 max-w-[300px] w-full mx-auto sm:max-w-none">
-        <ExerciseDemo animation={animation} name={se.name} />
-      </div>
+      {!done && (
+        <div className="max-w-[260px] w-full mx-auto sm:max-w-none">
+          <ExerciseDemo animation={animation} name={se.name} bare />
+        </div>
+      )}
     </div>
   );
 }
@@ -524,8 +530,13 @@ function SetTracker({ total, done }: { total: number; done: number }) {
 
 function CompleteBlock({ se, next, onNext, onUndo, onRest }: { se: SessionExercise; next?: string; onNext: () => void; onUndo: () => void; onRest?: () => void }) {
   const armed = useArmed();
+  const block = useRef<HTMLDivElement>(null);
+  // finishing the last set can leave you scrolled past this: bring the way forward into view
+  useEffect(() => {
+    block.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
   return (
-    <div className="rounded-card bg-done-soft p-4 space-y-3 anim-pop">
+    <div ref={block} className="rounded-card bg-done-soft p-4 space-y-3 anim-pop">
       <p className="font-semibold text-done flex items-center gap-2">
         <Icon name="check" size={20} strokeWidth={2.4} /> {se.name} complete
       </p>

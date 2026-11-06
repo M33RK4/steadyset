@@ -55,6 +55,29 @@ test("every exercise picture still has valid markup once the theme's values are 
   }
 });
 
+test("the arms stay clear of the head all through pulling from overhead", () => {
+  const toSegment = (p: Pt, a: Pt, b: Pt) => {
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    const u = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+    return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy);
+  };
+  let seen: Joints | null = null;
+  jointProbe.side = (j) => {
+    seen = j;
+  };
+  try {
+    for (const name of ["lat-pulldown", "pull-up", "chin-up"]) for (let i = 0; i < 48; i++) {
+      ANIMATIONS[name].at(i / 48, []);
+      const j = seen as unknown as Joints;
+      // the head's radius plus half an arm's thickness
+      const gap = Math.min(toSegment(j.head, j.shoulder, j.elbow[1]), toSegment(j.head, j.elbow[1], j.hand[1]));
+      assert.ok(gap >= 12, `${name} at ${i}/48: the arm is ${gap.toFixed(1)} from the centre of the head`);
+    }
+  } finally {
+    jointProbe.side = null;
+  }
+});
+
 test("animations produce valid geometry through the whole movement", () => {
   for (const [key, anim] of Object.entries(ANIMATIONS)) {
     const ex = BUILT_IN_EXERCISES.find((e) => e.animation === key);

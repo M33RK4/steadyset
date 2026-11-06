@@ -396,7 +396,7 @@ const inclinePress: ExerciseAnimation = {
 
 const latPulldown: ExerciseAnimation = {
   cycle: 4.5,
-  cue: "The bar travels down toward the upper chest as the elbows drive down and back.",
+  cue: "Leaning back a little: the bar travels down toward the upper chest as the elbows drive down and back.",
   frames: [
     { t: 0, label: "Arms overhead" },
     { t: 0.45, label: "Bar at upper chest" },
@@ -404,8 +404,8 @@ const latPulldown: ExerciseAnimation = {
   viewBox: "0 -10 200 160",
   at: side(
     [
-      { pose: { hip: [92, 102], torso: [-96, -98], head: -92, hands: [[96, 12], [98, 12]], feet: [[126, 133], [129, 133]] }, hold: 0.12, move: 0.33 },
-      { pose: { hip: [92, 102], torso: [-100, -104], head: -96, hands: [[106, 63], [108, 63]], feet: [[126, 133], [129, 133]] }, hold: 0.12, move: 0.43 },
+      { pose: { hip: [92, 102], torso: [-104, -110], head: -100, hands: [[103, 24], [105, 24]], feet: [[126, 133], [129, 133]] }, hold: 0.12, move: 0.33 },
+      { pose: { hip: [92, 102], torso: [-108, -114], head: -102, hands: [[90, 64], [92, 64]], feet: [[126, 133], [129, 133]] }, hold: 0.12, move: 0.43 },
     ],
     (j, k) => {
       const stack = weightStack(160, 12, { lift: k * 16 });
@@ -418,9 +418,9 @@ const latPulldown: ExerciseAnimation = {
           ...tube([150, FLOOR - 3], [150, -2], 3),
           ...tube([96, -2], [192, -2], 2.6),
           ...bracket([150, -2], 0, 3.4),
-          ...cable([stack.cable, [173, 2], [101, 2], g]),
+          ...cable([stack.cable, [173, 2], [100, 2], g]),
           ...pulley([173, 2], 3.4, k * 200),
-          ...pulley([101, 2], 3.4, k * 200),
+          ...pulley([100, 2], 3.4, k * 200),
           ...tube([92, 112], [92, FLOOR - 3], 2.6),
           ...pad(68, 107, 46, 8),
           ...tube([122, 84], [122, FLOOR - 3], 2),
@@ -1390,15 +1390,15 @@ const preacherCurl: ExerciseAnimation = {
 const chinUp: ExerciseAnimation = {
   cycle: 4.8,
   viewBox: "0 -44 200 194",
-  cue: "Hanging with palms facing you: pull the chin over the bar by driving the elbows down, then lower to a full hang.",
+  cue: "Hanging with palms facing you and the chest lifted: pull the chin over the bar by driving the elbows down, then lower to a full hang.",
   frames: [
     { t: 0, label: "Full hang" },
     { t: 0.45, label: "Chin over the bar" },
   ],
   at: side(
     [
-      { pose: { hip: [94, 62], torso: [-92, -90], head: -86, hands: [[99, -24], [101, -24]], feet: [[74, 104], [78, 102]], footAngle: [40, 40] }, hold: 0.14, move: 0.36 },
-      { pose: { hip: [86, 28], torso: [-82, -84], head: -96, hands: [[99, -24], [101, -24]], feet: [[66, 70], [70, 68]], footAngle: [40, 40] }, hold: 0.1, move: 0.4 },
+      { pose: { hip: [88, 55], torso: [-106, -110], head: -100, hands: [[99, -24], [101, -24]], feet: [[100, 110], [104, 108]], footAngle: [50, 50] }, hold: 0.14, move: 0.36 },
+      { pose: { hip: [90, 28], torso: [-92, -96], head: -98, hands: [[99, -24], [101, -24]], feet: [[96, 84], [100, 82]], footAngle: [50, 50] }, hold: 0.1, move: 0.4 },
     ],
     () => ({
       back: [
@@ -1849,15 +1849,15 @@ const birdDog: ExerciseAnimation = (() => {
 const pullUp: ExerciseAnimation = {
   cycle: 4.8,
   viewBox: "0 -44 200 194",
-  cue: "Hanging with palms facing away: pull the chest up toward the bar by driving the elbows down, then lower to a full hang.",
+  cue: "Hanging with palms facing away and the chest lifted: pull the chest up toward the bar by driving the elbows down, then lower to a full hang.",
   frames: [
     { t: 0, label: "Full hang" },
     { t: 0.45, label: "Chest to the bar" },
   ],
   at: side(
     [
-      { pose: { hip: [95, 62], torso: [-93, -91], head: -88, hands: [[99, -24], [101, -24]], feet: [[90, 119], [92, 118]], footAngle: [70, 70] }, hold: 0.14, move: 0.36 },
-      { pose: { hip: [88, 21], torso: [-79, -81], head: -96, hands: [[99, -24], [101, -24]], feet: [[90, 78], [93, 77]], footAngle: [62, 62] }, hold: 0.14, move: 0.36 },
+      { pose: { hip: [88, 55], torso: [-106, -110], head: -100, hands: [[99, -24], [101, -24]], feet: [[106, 112], [109, 111]], footAngle: [66, 66] }, hold: 0.14, move: 0.36 },
+      { pose: { hip: [95, 23], torso: [-98, -102], head: -100, hands: [[99, -24], [101, -24]], feet: [[100, 81], [103, 80]], footAngle: [62, 62] }, hold: 0.14, move: 0.36 },
     ],
     () => ({
       back: [
