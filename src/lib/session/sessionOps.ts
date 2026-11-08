@@ -42,6 +42,28 @@ export function sessionExercisesOf(data: AppData, sessionId: string): SessionExe
   return data.sessionExercises.filter((e) => e.sessionId === sessionId).sort((a, b) => a.position - b.position);
 }
 
+/**
+ * The note written for an exercise in its plan (Workouts → Edit), read live so a change to the
+ * plan shows straight away. When a day has the same exercise twice, the second one in the workout
+ * gets the second one's note. Exercises added during the workout get that exercise's note too.
+ */
+export function planNoteFor(data: AppData, se: SessionExercise): string {
+  const dayId = data.sessions.find((s) => s.id === se.sessionId)?.planDayId;
+  if (!dayId || !se.exerciseId) return "";
+  const inPlan = exercisesOfDay(data, dayId).filter((pe) => pe.exerciseId === se.exerciseId);
+  if (!inPlan.length) return "";
+  const nth = sessionExercisesOf(data, se.sessionId)
+    .filter((e) => e.exerciseId === se.exerciseId)
+    .findIndex((e) => e.id === se.id);
+  return inPlan[Math.min(Math.max(nth, 0), inPlan.length - 1)].notes.trim();
+}
+
+/** The note written for the whole plan day this workout came from. */
+export function planDayNoteFor(data: AppData, sessionId: string): string {
+  const dayId = data.sessions.find((s) => s.id === sessionId)?.planDayId;
+  return (dayId && data.planDays.find((d) => d.id === dayId)?.notes.trim()) || "";
+}
+
 export function setsOf(data: AppData, sessionExerciseId: string): CompletedSet[] {
   return data.sets.filter((s) => s.sessionExerciseId === sessionExerciseId).sort((a, b) => a.setNumber - b.setNumber);
 }

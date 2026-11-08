@@ -14,6 +14,8 @@ import {
   finishSet,
   isTimed,
   nextPendingExercise,
+  planDayNoteFor,
+  planNoteFor,
   selectExercise,
   sessionExercisesOf,
   sessionProgress,
@@ -123,6 +125,7 @@ function ActiveWorkout() {
   const list = sessionExercisesOf(data, session.id);
   const prog = sessionProgress(data, session.id);
   const current = list.find((e) => e.id === active!.currentExerciseId) ?? null;
+  const dayNote = planDayNoteFor(data, session.id);
   const timer = active!.timer;
   // During rest the timer replaces the exercise panel; "done" stays up until "Begin set" is tapped.
   const timerVisible = timer.status === "running" || timer.status === "paused" || timer.status === "done";
@@ -165,6 +168,7 @@ function ActiveWorkout() {
             </span>
             <span>{plural(prog.sets, "set")}</span>
           </p>
+          {dayNote && <PlanNote note={dayNote} className="mt-2" />}
         </div>
         <Button variant="secondary" size="sm" onClick={() => setSummaryOpen(true)}>
           Finish
@@ -250,6 +254,7 @@ function ActiveWorkout() {
 function ExerciseRow({ se, isCurrent, onSelect, animation }: { se: SessionExercise; isCurrent: boolean; onSelect: () => void; animation: string }) {
   const { data } = useApp();
   const done = setsOf(data, se.id).length;
+  const note = planNoteFor(data, se);
   const statusBadge =
     se.status === "completed" ? <Badge tone="done">Done</Badge> : se.status === "skipped" ? <Badge>Skipped</Badge> : se.status === "active" ? <Badge tone="accent">Started</Badge> : null;
   return (
@@ -273,6 +278,13 @@ function ExerciseRow({ se, isCurrent, onSelect, animation }: { se: SessionExerci
             {formatTarget({ ...se, sets: se.targetSets })}
             {!isTimed(se) && ` · ${done}/${se.targetSets} sets`}
           </p>
+          {note && (
+            <p className="text-sm text-muted flex items-center gap-1.5 min-w-0 mt-0.5">
+              <Icon name="note" size={14} className="shrink-0 text-accent-text" />
+              <span className="sr-only">Your note: </span>
+              <span className="truncate">{note}</span>
+            </p>
+          )}
         </div>
         {statusBadge}
         <Icon name="chevronRight" size={18} className="text-muted" />
@@ -474,10 +486,25 @@ function LastTimeNote({ se, setNumber }: { se: SessionExercise; setNumber: numbe
  * full guide are a tap away in "How to do it". Once an exercise is done the animation goes too, so
  * the way on to the next one is right there.
  */
+/** A note the user wrote in their plan, for the day or for one exercise. */
+function PlanNote({ note, className }: { note: string; className?: string }) {
+  return (
+    <p className={cx("flex gap-2 rounded-ctl bg-accent-soft px-3 py-2 text-sm leading-snug text-left", className)}>
+      <Icon name="note" size={16} className="shrink-0 mt-0.5 text-accent-text" />
+      <span className="min-w-0 break-words whitespace-pre-line">
+        <span className="sr-only">Your note: </span>
+        {note}
+      </span>
+    </p>
+  );
+}
+
 function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: string }) {
+  const { data } = useApp();
   const info = useExercises().get(se.exerciseId);
   const openSheet = useExerciseSheet();
   const done = se.status === "completed";
+  const note = planNoteFor(data, se);
   return (
     <div className={cx("grid gap-4 items-start", !done && "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]")}>
       <div className="min-w-0 space-y-1">
@@ -489,6 +516,7 @@ function ExerciseHeader({ se, animation }: { se: SessionExercise; animation: str
           Target {formatTarget({ ...se, sets: se.targetSets })}
           {se.restSeconds > 0 && !isTimed(se) ? ` · ${se.restSeconds}s rest` : ""}
         </p>
+        {note && !done && <PlanNote note={note} className="mt-2" />}
         {info && !done && (
           <button type="button" onClick={() => openSheet(info.id)} className="mt-2 inline-flex items-center gap-1.5 font-bold text-accent-text hover:underline">
             <Icon name="info" size={18} /> How to do it
@@ -617,12 +645,14 @@ function Tips({ steps, mistakes, safety, breathing }: { steps: string[]; mistake
 // ---------------------------------------------------------------- rest timer (steps 8–11)
 
 function RestPanel({ current }: { current: SessionExercise | null }) {
-  const { active, setActive, prefs, setPrefs, step } = useApp();
+  const { data, active, setActive, prefs, setPrefs, step } = useApp();
   const timer = active!.timer;
   const running = timer.status === "running";
   const now = useNow(running, 200);
   const rem = remainingMs(timer, now);
   const done = timer.status === "done";
+  // another set of the same exercise is coming: its note is worth a glance while resting
+  const note = current && timer.nextSetNumber ? planNoteFor(data, current) : "";
   const [customOpen, setCustomOpen] = useState(false);
   const [custom, setCustom] = useState<number | null>(timer.durationMs / 1000);
 
@@ -664,6 +694,7 @@ function RestPanel({ current }: { current: SessionExercise | null }) {
           {timer.nextSetNumber && current ? `Rest · next: ${current.name}, set ${timer.nextSetNumber}` : "Rest before your next exercise"}
         </h2>
       )}
+      {note && <PlanNote note={note} className="w-full max-w-md" />}
 
       {!done && (
         <ProgressRing value={1 - progress(timer, now)} size={248} stroke={14} label={`${formatClock(rem / 1000)} of rest remaining`}>

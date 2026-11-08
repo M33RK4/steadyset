@@ -6,7 +6,10 @@ import {
   discardSession,
   finishSession,
   finishSet,
+  addExerciseToSession,
   nextPendingExercise,
+  planDayNoteFor,
+  planNoteFor,
   selectExercise,
   sessionExercisesOf,
   sessionProgress,
@@ -156,4 +159,35 @@ test("discard only works when nothing was recorded", () => {
   const hip = sessionExercisesOf(data, sessionId)[0];
   data = apply(data, finish(data, active, hip.id, 1, 1000).changes);
   assert.equal(discardSession(data, sessionId).length, 0);
+});
+
+test("the notes written in the plan show in the workout, and follow edits to the plan", () => {
+  let { data, sessionId } = startMonday();
+  const session = data.sessions.find((s) => s.id === sessionId)!;
+  const list = sessionExercisesOf(data, sessionId);
+  // nothing written yet
+  assert.equal(planNoteFor(data, list[0]), "");
+  assert.equal(planDayNoteFor(data, sessionId), "");
+
+  const planEx = data.planExercises.filter((pe) => pe.planDayId === session.planDayId).sort((a, b) => a.position - b.position);
+  data = {
+    ...data,
+    planExercises: data.planExercises.map((pe) => (pe.id === planEx[2].id ? { ...pe, notes: "  Seat on 4, feet high  " } : pe)),
+    planDays: data.planDays.map((d) => (d.id === session.planDayId ? { ...d, notes: "Go light this week" } : d)),
+  };
+  assert.equal(planNoteFor(data, list[2]), "Seat on 4, feet high");
+  assert.equal(planNoteFor(data, list[0]), "");
+  assert.equal(planDayNoteFor(data, sessionId), "Go light this week");
+
+  // the same exercise added again during the workout gets its note too
+  data = apply(data, addExerciseToSession(data, sessionId, list[2].exerciseId!, { restSeconds: 60 }));
+  const added = sessionExercisesOf(data, sessionId).at(-1)!;
+  assert.equal(planNoteFor(data, added), "Seat on 4, feet high");
+
+  // an exercise that isn't in the plan, and a workout with no plan, have none
+  const other = data.planExercises.find((pe) => !planEx.some((p) => p.exerciseId === pe.exerciseId))!;
+  data = apply(data, addExerciseToSession(data, sessionId, other.exerciseId, { restSeconds: 60 }));
+  assert.equal(planNoteFor(data, sessionExercisesOf(data, sessionId).at(-1)!), "");
+  const free = startSession(data, { plan: null, day: null, date: "2026-10-26", now: new Date(2026, 9, 26, 19, 0) });
+  assert.equal(planDayNoteFor(apply(data, free.changes), free.sessionId), "");
 });
