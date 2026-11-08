@@ -2426,6 +2426,171 @@ const generic: ExerciseAnimation = {
   },
 };
 
+/** Leg switches: lying flat, legs straight; one lowers to hover over the floor as the other rises, like scissors. */
+const legSwitches: ExerciseAnimation = (() => {
+  const UP: Pt = [113, 68];
+  const LOW: Pt = [161, 115];
+  const base: Omit<Pose, "feet" | "footAngle"> = { hip: [104, 125], torso: [180, 180], head: 180, hands: [[104, 131], [106, 131]], handKind: ["flat", "flat"] };
+  return {
+    cycle: 4.4,
+    cue: "Lying on the back with both legs straight: one leg lowers to hover just above the floor as the other rises, then they switch over like scissors.",
+    frames: [
+      { t: 0, label: "Near leg low" },
+      { t: 0.5, label: "Legs switched" },
+    ],
+    at: side(
+      [
+        { pose: { ...base, feet: [UP, LOW], footAngle: [-86, -18] }, hold: 0.08, move: 0.42 },
+        { pose: { ...base, feet: [LOW, UP], footAngle: [-18, -86] }, hold: 0.08, move: 0.42 },
+      ],
+      () => ({ back: [shadow(100, 160), ...mat(14, 180)] }),
+      (j) => j.ankle[1],
+    ),
+  };
+})();
+
+/**
+ * Dragon flag: lying on a bench gripping it behind the head, the body rises in one straight line,
+ * pivoting on the upper back, then lowers slowly until it hovers just above the bench. The pose is
+ * worked out from the body's angle so the shoulders stay put on the bench all the way through.
+ */
+const dragonFlag: ExerciseAnimation = (() => {
+  const neck: Pt = [66, 97];
+  const LOW = 8;
+  const TOP = 72;
+  const poseOf = (a: number): Pose => {
+    // the upper back curls a little less than the rest of the body: it's what rests on the bench
+    const b = a * 0.94;
+    const mid = add(neck, [L.torso2 * Math.cos(rad(b)), -L.torso2 * Math.sin(rad(b))]);
+    const hip = add(mid, [L.torso1 * Math.cos(rad(a)), -L.torso1 * Math.sin(rad(a))]);
+    const ankle = add(hip, [58 * Math.cos(rad(a)), -58 * Math.sin(rad(a))]);
+    return {
+      hip,
+      torso: [180 - a, 180 - b],
+      head: 180,
+      hands: [[31, 101], [34, 101]],
+      feet: [add(ankle, [-2, 0.6]), ankle],
+      footAngle: [-a - 6, -a - 6],
+    };
+  };
+  const steps = [
+    { pose: LOW, hold: 0.1, move: 0.32 },
+    { pose: TOP, hold: 0.1, move: 0.48 },
+  ];
+  const angleAt = keyframes((a: number, b: number, t: number) => lerp(a, b, t), steps);
+  const path = guide(guidePath((s) => joints(poseOf(lerp(LOW, TOP, s))), (j) => j.ankle[1], neck));
+  const headAt = (t: number) => joints(poseOf(angleAt(t).pose)).head;
+  return {
+    cycle: 5.6,
+    viewBox: "0 -30 200 180",
+    cue: "Gripping the bench behind the head: the body lifts in one straight line from the shoulders, then lowers slowly until it hovers just above the bench.",
+    frames: [
+      { t: 0, label: "Body just above the bench" },
+      { t: 0.42, label: "Body raised, straight" },
+    ],
+    at: (t: number, muscles: MuscleId[] = []): Shape[] => {
+      const { pose, k } = angleAt(t);
+      const j = joints(poseOf(pose));
+      j.sway = hairSway(t, headAt);
+      const b = bodyLayers(j, muscles, k);
+      return [...stage(), shadow(80, 130), ...bench(24, 132, 104, 6), ...b.farArm, ...b.farLeg, ...b.trunk, ...b.nearLeg, ...b.nearArm, ...b.glow, ...path];
+    },
+  };
+})();
+
+/**
+ * Torso rotator (rotary torso machine), seen from the front and a little above: the legs stay
+ * locked in while the shoulders, arms and chest pad turn to one side together, then come back (the
+ * pad is fixed to the turning column behind the body). The
+ * upper body is turned as a solid shape about the spine, so what swings toward the viewer sits a
+ * little lower and what swings away a little higher.
+ */
+const torsoRotator: ExerciseAnimation = (() => {
+  const base = frontJoints({ arm: 20, elbowBend: 0, spread: 0, seated: true });
+  const cx = base.neck[0];
+  const sy = base.shoulders[0][1];
+  const waistY = base.pelvis[1] - 10;
+  const TURN = 42;
+  const steps = [
+    { pose: 0, hold: 0.12, move: 0.36 },
+    { pose: TURN, hold: 0.14, move: 0.38 },
+  ];
+  const turnAt = keyframes((a: number, b: number, t: number) => lerp(a, b, t), steps);
+  // a point on the upper body [sideways, toward the viewer, height] as it appears turned by `a`°
+  const view = (p: [number, number, number], a: number): Pt => {
+    const c = Math.cos(rad(a));
+    const s = Math.sin(rad(a));
+    return [cx + p[0] * c + p[1] * s, p[2] + (-p[0] * s + p[1] * c) * 0.3];
+  };
+  const both = (x: number, d: number, y: number, a: number): [Pt, Pt] => [view([-x, d, y], a), view([x, d, y], a)];
+  // elbows by the sides, forearms forward to the handles either side of the chest pad
+  const upper = (a: number): Pick<FrontJoints, "shoulders" | "elbows" | "hands" | "head"> => ({
+    shoulders: both(15, 0, sy, a),
+    elbows: both(18, 8, sy + 19, a),
+    hands: both(13, 20, sy + 12, a),
+    head: [cx + Math.sin(rad(a)) * 4.5, base.head[1]],
+  });
+  // the guide curves round above the head, the way the body turns
+  const path = guide(Array.from({ length: 12 }, (_, i): Pt => view([0, 26, 18], lerp(-4, TURN, i / 11))));
+  const glowOf = (muscles: MuscleId[], k: number): Shape[] => {
+    if (!muscles.includes("obliques")) return [];
+    const op = 0.42 + 0.48 * k;
+    return [-1, 1].flatMap((sign): Shape[] => [
+      { k: "ellipse", c: [cx + sign * 11, waistY - 7], rx: 4.6, ry: 7.8, rot: sign * -10, tone: "muscle", op: op * 0.35 },
+      { k: "ellipse", c: [cx + sign * 11, waistY - 7], rx: 3.2, ry: 6.4, rot: sign * -10, tone: "muscle", op },
+    ]);
+  };
+  return {
+    cycle: 4.4,
+    viewBox: "0 0 200 150",
+    cue: "Seen from the front with the legs locked in: the shoulders, arms and chest pad turn to one side together, pause, then come back to the middle slowly.",
+    frames: [
+      { t: 0, label: "Facing forward" },
+      { t: 0.48, label: "Turned to the side" },
+    ],
+    at: (t: number, muscles: MuscleId[] = []): Shape[] => {
+      const { pose: a, k } = turnAt(t);
+      const j: FrontJoints = { ...base, ...upper(a) };
+      const b = frontLayers(j, muscles, k);
+      const stack = weightStack(176, 30, { lift: k * 12, w: 18 });
+      // the chest pad in front of the chest turns with the body
+      const corner = (x: number, y: number) => view([x, 12, y], a);
+      const padPts = [corner(-10, sy - 2), corner(10, sy - 2), corner(10, sy + 18), corner(-10, sy + 18)];
+      // upright handles in the hands, fixed to the pad's sides
+      const handles = j.hands.flatMap((h, i): Shape[] => [...tube(corner(i ? 10 : -10, sy + 8), h, 1.4), ...grip(h, 90, 9)]);
+      const chestPad: Shape[] = [
+        { k: "path", d: `M${padPts.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" L")} Z`, w: 0, fill: true, tone: "pad", stroke: "line", sw: 0.6 },
+        { k: "line", a: lerpPt(padPts[0], padPts[3], 0.12), b: lerpPt(padPts[1], padPts[2], 0.12), w: 0.7, tone: "white", op: 0.28 },
+      ];
+      return [
+        ...stage(),
+        shadow(100, 150),
+        ...stack.shapes,
+        ...tube([cx, FLOOR - 3], [cx, 10], 3.4),
+        ...tube([60, 10], [186, 10], 2.6),
+        ...cable([stack.cable, [184, 14], [cx + 4, 14]]),
+        ...pulley([cx, 14], 3.4, a * 4),
+        ...tube([70, FLOOR - 3], [130, FLOOR - 3], 2.2),
+        foot(72),
+        foot(128),
+        ...pad(76, 92, 48, 8, 3),
+        ...b.legs,
+        // the shin pad holding the legs in place
+        ...pad(83, 116, 34, 6, 3),
+        ...b.shorts,
+        ...b.shirt,
+        ...glowOf(muscles, k),
+        ...b.head,
+        ...chestPad,
+        ...b.sleeves,
+        ...handles,
+        ...b.arms,
+        ...path,
+      ];
+    },
+  };
+})();
+
 export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "hip-thrust-machine": hipThrust,
   "db-romanian-deadlift": rdl,
@@ -2506,6 +2671,9 @@ export const ANIMATIONS: Record<string, ExerciseAnimation> = {
   "chest-butterfly": chestButterfly,
   "machine-chest-supported-row": machineChestSupportedRow,
   "one-arm-triceps-kickback": oneArmKickback,
+  "leg-switches": legSwitches,
+  "torso-rotator": torsoRotator,
+  "dragon-flag": dragonFlag,
   generic,
 };
 
